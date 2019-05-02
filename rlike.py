@@ -12,6 +12,9 @@ TO DO LIST:
 	. darken level (so you only see where theres light)
 	. batteries 
 	. flashlight
+
+	. clean everything the f up
+	. try to optomize level builder, the fact that im typing this while waiting for the level to load is a problem
 """
 from __future__ import print_function, unicode_literals
 import os, sys
@@ -24,7 +27,7 @@ COLORS = {
 	"@": "\033[1;45;93m",
 	">": "\033[1;45;33m",
 	"<": "\033[1;45;33m",
-	"+": "\033[1;90;43m",
+	"+": "\033[1;94;40m",
 	"#": "\033[1;90;40m",
 	"=": "\033[1;43;40m",
 	" ": "\033[45m",
@@ -57,6 +60,20 @@ FIGHTABLE = RAT + BAT + SNAKE
 TANG = STONE + WALL + DOOR #Tangible
 ACT = PLAYER + DOOR + FIGHTABLE
 GETTABLE = WEAP + ARMOR + CONSUME
+
+START = """###########
+#         #
+#  < / >  #
+#    @    #
+#         #
+###########""".splitlines()
+
+END = """##########
+#    Wow #
+#  <     #
+##########
+# TheEnd #
+##########""".splitlines()
 
 ENEMIES = [{}]
 UNDER = [{(5, 3):[" "],(5, 2):[" "]}] # a stack for each position, UNDER[level][position]
@@ -308,86 +325,90 @@ def equip(item):
 		DEF += item["stat"]
 	return "Equipted " + item["name"]
 
-if __name__ == """__main__""":
-	board = """###########
-#         #
-#  < / >  #
-#    @    #
-#         #
-###########
-""".splitlines()
-	LEVELS = [board]
-	LEVEL = 0
-	board = LEVELS[LEVEL]
-	data = "The Jeorney Begins"
-	animate(board, .300, data=data)
-	while True:
-		cmds = raw_input(": ").split()[::-1]
-		while cmds:
-			data = "HP: " + str(HP) + " Weapon: "
-			if EQUIP['weapn']: data += EQUIP["weapn"]['name']
-			else: data += "None"
-			if EQUIP['armor']: data += " Armor: " + EQUIP["armor"]["name"] + "\n"
-			else: data += " Armor: None\n"
-			cmd = cmds.pop()
-			if cmd in ["Q", "quit"]: 
+LEVELS = [START]
+def dig_dungeon(floors=15):
+	global UNDER, ENEMIES, ITEMS, LEVELS, END
+	lvl = floors
+	UNDER += [{}] * (floors + 1)
+	ITEMS += [{}] * (floors + 1)
+	ENEMIES += [{}] * (floors + 1)
+	while floors:
+		animate(["Digging Dungeon...", "floor " + str(lvl-floors)], 0)
+		floors -= 1
+		LEVELS.append(populate(refine(new_floor(find(LEVELS[-1], DWNSTR), lvl-floors), lvl-floors), lvl-floors))
+	entry = find(LEVELS[-1], DWNSTR)
+	LEVELS.append([" " * (entry[0] + len(END[0]))] * (entry[1] + len(END)))	
+	insert(LEVELS[-1], END, (entry[0] - 2, entry[1] - 2))
+
+
+LEVEL = 0
+board = LEVELS[LEVEL]
+dig_dungeon(floors=int(raw_input("Wesley's Rougelike\nHow many levels? (blank for 15): ")))
+data = "The Jeorney Begins"
+animate(board, .300, data=data)
+while True:
+	if LEVEL > len(LEVELS): break
+	cmds = raw_input(": ").split()[::-1]
+	while cmds:
+		data = "HP: " + str(HP) + " Weapon: "
+		if EQUIP['weapn']: data += EQUIP["weapn"]['name']
+		else: data += "None"
+		if EQUIP['armor']: data += " Armor: " + EQUIP["armor"]["name"] + "\n"
+		else: data += " Armor: None\n"
+		cmd = cmds.pop()
+		if cmd in ["Q", "quit"]: 
+			if raw_input("Print dungeon? Nothing for no..."):
 				for b in LEVELS: printb(b)
-				quit()
+			quit()
 
-			if cmd in ["L", "left"]: 
-				step(board, find(board, PLAYER), (-1, 0), under=True, lvl=LEVEL)
-			if cmd in ["R", "right"]: 
-				step(board, find(board, PLAYER), (1, 0), under=True, lvl=LEVEL)
-			if cmd in ["U", "up"]: 
-				step(board, find(board, PLAYER), (0, -1), under=True, lvl=LEVEL)
-			if cmd in ["D", "down"]: 
-				step(board, find(board, PLAYER), (0, 1), under=True, lvl=LEVEL)
+		if cmd in ["L", "left"]: 
+			step(board, find(board, PLAYER), (-1, 0), under=True, lvl=LEVEL)
+		if cmd in ["R", "right"]: 
+			step(board, find(board, PLAYER), (1, 0), under=True, lvl=LEVEL)
+		if cmd in ["U", "up"]: 
+			step(board, find(board, PLAYER), (0, -1), under=True, lvl=LEVEL)
+		if cmd in ["D", "down"]: 
+			step(board, find(board, PLAYER), (0, 1), under=True, lvl=LEVEL)
 
-			if cmd in ["Un", "under"]: 
-				data += ", ".join(UNDER[LEVEL][find(board, PLAYER)])
+		if cmd in ["Un", "under"]: 
+			data += ", ".join(UNDER[LEVEL][find(board, PLAYER)])
 
-			if cmd in ["Inv", "inventory"]:
-				data += ", ".join([item["name"] for item in INV])
+		if cmd in ["Inv", "inventory"]:
+			data += ", ".join([item["name"] for item in INV])
 
-			if cmd in ["stats"]:
-				data += "Atk: " + str(ATK) + "\nDef: " + str(DEF)
+		if cmd in ["stats"]:
+			data += "Atk: " + str(ATK) + "\nDef: " + str(DEF)
 
-			if cmd in ["Eq", "equip"]:
-				if cmds:
-					eq = cmds.pop()
-				else:
-					eq = raw_input("Equipt what? : ")
-				for item in INV:
-					if item["name"] == eq:
-						data += str(equip(item))	
+		if cmd in ["Eq", "equip"]:
+			if cmds:
+				eq = cmds.pop()
+			else:
+				eq = raw_input("Equipt what? : ")
+			for item in INV:
+				if item["name"] == eq:
+					data += str(equip(item))	
 
-			if cmd in ["G", "get"]:
-				for piece in UNDER[LEVEL][find(board, PLAYER)]:
-					if (find(board, PLAYER), piece) in ITEMS[LEVEL]:
-						UNDER[LEVEL][find(board, PLAYER)].remove(piece)
-						INV.append(ITEMS[LEVEL][(find(board, PLAYER), piece)])
+		if cmd in ["G", "get"]:
+			for piece in UNDER[LEVEL][find(board, PLAYER)]:
+				if (find(board, PLAYER), piece) in ITEMS[LEVEL]:
+					UNDER[LEVEL][find(board, PLAYER)].remove(piece)
+					INV.append(ITEMS[LEVEL][(find(board, PLAYER), piece)])
 
-			if cmd in ["W", "warp"]: # and DEBUG:
-				put(board, find(board, PLAYER), UNDER[LEVEL][find(board, PLAYER)].pop(), under=True, lvl=LEVEL)
-				put(board, find(board, DWNSTR), PLAYER, under=True, lvl=LEVEL)
+		if cmd in ["W", "warp"]: # and DEBUG:
+			put(board, find(board, PLAYER), UNDER[LEVEL][find(board, PLAYER)].pop(), under=True, lvl=LEVEL)
+			put(board, find(board, DWNSTR), PLAYER, under=True, lvl=LEVEL)
 
-			if cmd in ["S", "stairs"]:
-				pos = find(board, PLAYER)
-				if pos in UNDER[LEVEL]: 
-					if UPSTAIR in UNDER[LEVEL][pos]:
-						LEVEL -= 1
-						if LEVEL < 0: 
-							print("Farewell traveler")
-							quit()
-					elif DWNSTR in UNDER[LEVEL][pos]: 
-						LEVEL += 1
-						if LEVEL >= len(LEVELS):
-							LEVELS.append(populate(refine(new_floor(pos, LEVEL),LEVEL),LEVEL))
-							UNDER.append({})
-							ITEMS.append({})
-							ENEMIES.append({})
-							put(LEVELS[LEVEL], pos, PLAYER, under=True, lvl=LEVEL)
-							C=0
+		if cmd in ["S", "stairs"]:
+			pos = find(board, PLAYER)
+			if pos in UNDER[LEVEL]: 
+				if UPSTAIR in UNDER[LEVEL][pos]:
+					LEVEL -= 1
+					if LEVEL < 0: 
+						print("Farewell traveler")
+						quit()
+				elif DWNSTR in UNDER[LEVEL][pos]: 
+					LEVEL += 1
+					put(LEVELS[LEVEL], find(LEVELS[LEVEL], UPSTAIR), PLAYER, under=True, lvl=LEVEL)
 
-			board = LEVELS[LEVEL]
-			animate(board, .300, data=data)
+		board = LEVELS[LEVEL]
+		animate(board, .300, data=data)
