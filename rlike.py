@@ -1,5 +1,5 @@
 """
-rlike.py a vanilla python turn based rougelike
+rlike.py a vanilla python turn based roguelike
 board is splitlines syntax, list of strings
 board[y][x] for example
 
@@ -214,12 +214,15 @@ def new_floor(entry, lvl):
 		) * max(min(randint(15, 15 + (1 * lvl)), 80), entry[1] + 2)
 	board = board.splitlines()
 	exit = randint(1, len(board[0])-2), randint(2, len(board)-2)
-	while sqrt((entry[0] - exit[0])**2 + (entry[1] - exit[1])**2) < min(30, 8 + lvl):
+	while sqrt((entry[0] - exit[0])**2 + (entry[1] - exit[1])**2) < min(len(board[0]) / 3, len(board) / 3, 2 + lvl):
+		if DEBUG: print("Finding exit... ", exit)
 		exit = randint(1, len(board[0])-2), randint(2, len(board)-2)
 	X, Y = entry
 	d = (0, 0) #Direction
 	c = 0
 	while (X, Y) != exit:
+		animate(board, .00001, debug=True)
+
 		if get(board, (X, Y)) == STONE:
 			put(board, (X, Y), EMPTY)
 
@@ -252,7 +255,11 @@ def makeroom(board, position, dimensions, lvl):
 
 def scrub(board, limit=4):
 	slots = checkfor(board, [STONE * limit] * limit)
+	c = 0
 	while slots:
+		if c > 3:
+			break
+		c+= 1
 		for stone in findall(board, STONE):
 			x, y = stone
 			try:
@@ -263,20 +270,20 @@ def scrub(board, limit=4):
 				put(board, stone, EMPTY)
 
 			slots = checkfor(board, [STONE * limit] * limit)
-			animate(board, .015, debug=True)
+			animate(board, .00001, debug=True)
 	for stone in findall(board, STONE):
 		x, y = stone
 		try:
 			nbrs = sum([get(board, pos) == EMPTY  for pos in [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]])
 		except IndexError:
 			nbrs = 0
-		animate(board, .015, debug=True)
+		animate(board, .00001, debug=True)
 		if nbrs in [2, 3] and randint(0, 20) < 8:
 			put(board, stone, EMPTY)
 	return board
 
 def refine(board, lvl):
-	sub = getsub(board, (1, 1), (len(board[0]) - 2, len(board) - 3))
+	sub = getsub(board, (1, 1), (len(board[0]) - 2, len(board) - 2))
 	room = checkfor(sub, [STONE * 6] * 6)
 	if room: makeroom(sub, choice(room), (6, 6), lvl)
 	b = scrub(sub)	
@@ -343,7 +350,7 @@ def dig_dungeon(floors=15):
 
 LEVEL = 0
 board = LEVELS[LEVEL]
-dig_dungeon(floors=int(raw_input("Wesley's Rougelike\nHow many levels? (blank for 15): ")))
+dig_dungeon(floors=int(raw_input("Wesley's Roguelike\nHow many levels? (blank for 15): ")))
 data = "The Jeorney Begins"
 animate(board, .300, data=data)
 while True:
@@ -358,7 +365,9 @@ while True:
 		cmd = cmds.pop()
 		if cmd in ["Q", "quit"]: 
 			if raw_input("Print dungeon? Nothing for no..."):
-				for b in LEVELS: printb(b)
+				for b in LEVELS: 
+					print()
+					printb(b)
 			quit()
 
 		if cmd in ["L", "left"]: 
