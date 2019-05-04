@@ -143,14 +143,14 @@ def colored(st):
 		if p in COLORS:
 			ret += COLORS[p] + p + COLORS['footer']
 		else:
-			ret += COLORS[EMPTY] + p
+			ret += COLORS[EMPTY] + p + COLORS['footer']
 	return ret + COLORS['footer']
 
 def printb(board): print(colored("\n".join(board)))
 
 def find(board, piece):
 	Y = 0
-	while not piece in board[Y]: Y += 1
+	while not (piece in board[Y]): Y += 1
 	return board[Y].index(piece), Y
 
 def findall(board, piece):
@@ -207,40 +207,34 @@ def collide(board, pos1, pos2):
 def insight(board, position1, position2):
 	pass
 
-def new_floor(entry, lvl):
-	"""returns floor with random carvings, garunteed solvable"""
+def solvable(board):
+	try:
+		entry = find(board, UPSTAIR)
+		exit = find(board, DWNSTR)
+		infected = [entry,]
+		check = [entry,]
+		while check:
+			if exit in infected: return True
+			x, y = check.pop()
+			for nbr in [(x+1, y), (x-1, y), (x, y-1), (x, y+1)]:
+				if not nbr in infected and get(board, nbr) not in TANG:
+					infected.append(nbr)
+					check.append(nbr)
+		return False
+	except IndexError:
+		return False
+
+def newfloor(entry, lvl):
 	board = (
 		STONE * max(min(randint(20, 20 + (3 * lvl)), 110), entry[0] + 2) + "\n"
 		) * max(min(randint(15, 15 + (1 * lvl)), 37), entry[1] + 2)
 	board = board.splitlines()
+	insert(board, [EMPTY * (len(board[0]) - 2)] * (len(board)-2), (1, 1))
 	exit = randint(1, len(board[0])-2), randint(2, len(board)-2)
 	while sqrt((entry[0] - exit[0])**2 + (entry[1] - exit[1])**2) < min(len(board[0]) / 3, len(board) / 3, 2 + lvl):
 		exit = randint(1, len(board[0])-2), randint(2, len(board)-2)
-	X, Y = entry
-	d = (0, 0) #Direction
-	c = 0
-	while (X, Y) != exit:
-		animate(board, .00001, debug=True)
-
-		if get(board, (X, Y)) == STONE:
-			put(board, (X, Y), EMPTY)
-
-		if c <= 0 and randint(0, 10) > 4:
-			d = [(0, 1), (1, 0), (-1, 0), (0,-1)][randint(0,3)]
-			c = randint(2, 5)
-		dist = sqrt((X - exit[0])**2 + (Y - exit[1])**2)
-		if dist < 6:
-			if X == exit[0]: d = (0, 1) if Y < exit[1] else (0, -1)
-			else: d = (1, 0) if X < exit[0] else (-1, 0)
-		c -= 1
-	 	X += d[0]
-	 	Y += d[1]
-	 	if X == 0: X += 1
-	 	elif X == len(board[0])-1: X -= 1
-	 	elif Y == 0: Y += 1
-	 	elif Y == len(board)-1: Y -= 1
-		put(board, entry, UPSTAIR)		
-	put(board, exit, DWNSTR)
+	put(board, exit, DWNSTR)	
+	put(board, entry, UPSTAIR)
 	return board
 
 def makeroom(board, position, dimensions, lvl):
@@ -251,6 +245,18 @@ def makeroom(board, position, dimensions, lvl):
 		put(room, choice([n for n in findall(room, WALL)]), DOOR)
 	insert(board, room, position)
 
+def pathfind(board):
+	"""expects board with entrence, and exit and all empties (boarder okay)"""
+	empties = checkfor(board, EMPTY)
+	while empties:
+		while solvable(board) and empties:
+			pos = choice(empties)
+			insert(board, STONE, pos)
+			animate(board, 0.001, data=pos, debug=True)
+			empties = checkfor(board, EMPTY)
+		put(board, pos, FLOOR)
+	for pos in findall(board, FLOOR): put(board, pos, EMPTY)
+	return board
 
 def scrub(board, limit=3):
 	slots = checkfor(board, [STONE * limit] * limit)
@@ -279,7 +285,7 @@ def refine(board, lvl):
 	sub = getsub(board, (1, 1), (len(board[0]) - 2, len(board) - 2))
 	room = checkfor(sub, [STONE * 6] * 6)
 	if room: makeroom(sub, choice(room), (6, 6), lvl)
-	b = scrub(sub)	
+	b = scrub(sub)
 	for stone in findall(b, STONE):
 		try:
 			if get(b, (stone[0] + 1, stone[1])) == get(b, (stone[0] - 1, stone[1])) == EMPTY:
@@ -326,16 +332,22 @@ def equip(item):
 	return "Equipted " + item["name"]
 
 LEVELS = [START]
+
 def dig_dungeon(floors=15):
 	global UNDER, ENEMIES, ITEMS, LEVELS, END
-	lvl = floors
+	LEVEL = 0
 	UNDER += [{}] * (floors + 1)
 	ITEMS += [{}] * (floors + 1)
 	ENEMIES += [{}] * (floors + 1)
 	while floors:
-		animate(["Digging Dungeon...", "floor " + str(lvl-floors)], 0)
+		animate(["Digging Dungeon...", "floor " + str(LEVEL)], 0)
 		floors -= 1
-		LEVELS.append(populate(refine(new_floor(find(LEVELS[-1], DWNSTR), lvl-floors), lvl-floors), lvl-floors))
+		LEVEL += 1
+		board = pathfind(newfloor(find(LEVELS[-1], DWNSTR), LEVEL))
+		board = refine(board, LEVEL)
+		board = populate(board, LEVEL)
+		LEVELS.append(board)
+
 	entry = find(LEVELS[-1], DWNSTR)
 	LEVELS.append([" " * (entry[0] + len(END[0]))] * (entry[1] + len(END)))	
 	insert(LEVELS[-1], END, (entry[0] - 2, entry[1] - 2))
