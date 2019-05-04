@@ -33,6 +33,7 @@ COLORS = {
 	" ": "\033[45m",
 	".": "\033[1;45;35m",
 	"/": "\033[1;45;96m",
+	"\n": "\033[0m",
 	"footer": "\033[0m",
 	
 }
@@ -214,7 +215,7 @@ def solvable(board):
 		infected = [entry,]
 		check = [entry,]
 		while check:
-			if exit in infected: return True
+			if exit in infected: return infected
 			x, y = check.pop()
 			for nbr in [(x+1, y), (x-1, y), (x, y-1), (x, y+1)]:
 				if not nbr in infected and get(board, nbr) not in TANG:
@@ -231,7 +232,7 @@ def newfloor(entry, lvl):
 	board = board.splitlines()
 	insert(board, [EMPTY * (len(board[0]) - 2)] * (len(board)-2), (1, 1))
 	exit = randint(1, len(board[0])-2), randint(2, len(board)-2)
-	while sqrt((entry[0] - exit[0])**2 + (entry[1] - exit[1])**2) < min(len(board[0]) / 3, len(board) / 3, 2 + lvl):
+	while sqrt((entry[0] - exit[0])**2 + (entry[1] - exit[1])**2) < len(board[0]) / 2:
 		exit = randint(1, len(board[0])-2), randint(2, len(board)-2)
 	put(board, exit, DWNSTR)	
 	put(board, entry, UPSTAIR)
