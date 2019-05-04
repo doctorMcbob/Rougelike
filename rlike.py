@@ -253,28 +253,28 @@ def makeroom(board, position, dimensions, lvl):
 	insert(board, room, position)
 
 
-def scrub(board, limit=4):
+def scrub(board, limit=3):
 	slots = checkfor(board, [STONE * limit] * limit)
-	c = 0
 	while slots:
-		if c > 3:
-			break
-		c+= 1
-		for stone in findall(board, STONE):
-			x, y = stone
-			try:
-				nbrs = sum([get(board, pos) == STONE for pos in [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]])
-			except IndexError:
-				nbrs = 2
-			if nbrs >= 2 and randint(0, 20) < 5:
-				put(board, stone, EMPTY)
-
+		for slot in slots:
+			x_, y_ = slot
+			slot = getsub(board, slot, (limit, limit))
+			for stone in findall(slot, STONE):
+				x, y = stone
+				x, y = x + x_, y + y_
+				try:
+					nbrs = sum([get(board, pos) == STONE for pos in [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]])
+				except IndexError:
+					nbrs = 2
+				if nbrs >= 2 and randint(0, 20) < 5:
+					put(slot, stone, EMPTY)
+			insert(board, slot, (x_, y_))
 			slots = checkfor(board, [STONE * limit] * limit)
 			animate(board, .00001, debug=True)
 	for stone in findall(board, STONE):
 		x, y = stone
 		try:
-			nbrs = sum([get(board, pos) == EMPTY  for pos in [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]])
+			nbrs = sum([get(board, pos) == EMPTY for pos in [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]])
 		except IndexError:
 			nbrs = 0
 		animate(board, .00001, debug=True)
