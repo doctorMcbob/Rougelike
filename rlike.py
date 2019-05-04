@@ -143,7 +143,7 @@ def colored(st):
 		if p in COLORS:
 			ret += COLORS[p] + p + COLORS['footer']
 		else:
-			ret += p
+			ret += COLORS[EMPTY] + p
 	return ret + COLORS['footer']
 
 def printb(board): print(colored("\n".join(board)))
@@ -210,12 +210,11 @@ def insight(board, position1, position2):
 def new_floor(entry, lvl):
 	"""returns floor with random carvings, garunteed solvable"""
 	board = (
-		STONE * max(min(randint(20, 20 + (3 * lvl)), 80), entry[0] + 2) + "\n"
-		) * max(min(randint(15, 15 + (1 * lvl)), 80), entry[1] + 2)
+		STONE * max(min(randint(20, 20 + (3 * lvl)), 110), entry[0] + 2) + "\n"
+		) * max(min(randint(15, 15 + (1 * lvl)), 37), entry[1] + 2)
 	board = board.splitlines()
 	exit = randint(1, len(board[0])-2), randint(2, len(board)-2)
 	while sqrt((entry[0] - exit[0])**2 + (entry[1] - exit[1])**2) < min(len(board[0]) / 3, len(board) / 3, 2 + lvl):
-		if DEBUG: print("Finding exit... ", exit)
 		exit = randint(1, len(board[0])-2), randint(2, len(board)-2)
 	X, Y = entry
 	d = (0, 0) #Direction
@@ -256,28 +255,22 @@ def makeroom(board, position, dimensions, lvl):
 def scrub(board, limit=3):
 	slots = checkfor(board, [STONE * limit] * limit)
 	while slots:
-		for slot in slots:
-			x_, y_ = slot
-			slot = getsub(board, slot, (limit, limit))
-			for stone in findall(slot, STONE):
-				x, y = stone
-				x, y = x + x_, y + y_
-				try:
-					nbrs = sum([get(board, pos) == STONE for pos in [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]])
-				except IndexError:
-					nbrs = 2
-				if nbrs >= 2 and randint(0, 20) < 5:
-					put(slot, stone, EMPTY)
-			insert(board, slot, (x_, y_))
-			slots = checkfor(board, [STONE * limit] * limit)
-			animate(board, .00001, debug=True)
+		slot = choice(slots)
+		x, y = slot
+		slot = getsub(board, slot, (limit, limit))
+		for n in range(6):
+			put( slot,  choice([stone for stone in findall(slot, STONE)]), EMPTY )
+		insert(board, slot, (x, y))
+		animate(board, .001, debug=True)
+		slots = checkfor(board, [STONE * limit] * limit)
+	
 	for stone in findall(board, STONE):
 		x, y = stone
 		try:
 			nbrs = sum([get(board, pos) == EMPTY for pos in [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]])
 		except IndexError:
 			nbrs = 0
-		animate(board, .00001, debug=True)
+		animate(board, .001, debug=True)
 		if nbrs in [2, 3] and randint(0, 20) < 8:
 			put(board, stone, EMPTY)
 	return board
