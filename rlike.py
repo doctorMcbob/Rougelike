@@ -615,7 +615,7 @@ SPRITES:
                                 data += "refrence by number\n"
                         for n, item in enumerate(INV):
                                 data += str(n) + ": " + item['name'] + "\n"
-                if cmd in ["stats"]:
+                if cmd in ["stats"] and DEBUG:
                         data += "Atk: " + str(ATK) + "\nDef: " + str(DEF)
 
                 if cmd in ["Eq", "equip"]:
@@ -624,10 +624,13 @@ SPRITES:
                         else:
                                 eq = raw_input("Equipt what? : ")
                         for n, item in enumerate(INV):
-                                if eq in [item['name'], str(n)]:
+                                if "stat" not in item:
+                                        data += "Thats"
+                                elif eq in [item['name'], str(n)]:
                                         data += str(equip(item))
-                                else:
-                                        data += "Nothing found under " + eq
+                                break
+                        else:
+                                data += "Nothing found under " + eq
 
                 if cmd in ["G", "get"]:
                         for piece in UNDER[LEVEL][find(board, PLAYER)]:
@@ -681,7 +684,10 @@ SPRITES:
                                         UNDER[LEVEL][
                                                 find(board, PLAYER)
                                         ].append(item['char'])
-
+                                        data += "Dropped " + item['name']
+                                        break
+                        else:
+                                data += "Nothing found under " + dr
                 board = LEVELS[LEVEL]
                 animate(getlit(
                         board, [(find(board, PLAYER), 10)], LEVEL),
