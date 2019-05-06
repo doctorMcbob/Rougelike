@@ -3,6 +3,8 @@ rlike.py a vanilla python turn based roguelike
 board is splitlines syntax, list of strings
 board[y][x] for example
 
+PS: I hate pep8
+
 TO DO LIST:
 . enemy implementation
 . fighting implementation
@@ -13,8 +15,9 @@ TO DO LIST:
 . batteries
 . flashlight
 
-/ clean everything the f up
-/ try to optomize level builder
+Ongoing:
+. clean everything the f up
+. try to optomize level builder
 """
 from __future__ import print_function, unicode_literals
 import os
@@ -98,14 +101,21 @@ special = "bdfglp"
 def makename():
         roll = randint(0, 100)
         if roll < 15:
-                return choice(const) + choice(vowel) + (choice(special) * 2) + "y"
+                return choice(const) + choice(vowel) + (
+                        choice(special) * 2) + "y"
         if roll < 50:
-                return choice(const) + choice(vowel) + choice(special) + (choice(special) * 2) + choice(vowel) + choice(special) + "y"
+                return choice(const) + choice(vowel) + choice(special) + (
+                        choice(special) * 2
+                ) + choice(vowel) + choice(special) + "y"
         if roll < 65:
-                return choice(const) + choice(vowel) + choice(const) + choice(vowel) + "ly"
+                return choice(const) + choice(
+                        vowel) + choice(const) + choice(vowel) + "ly"
         if roll < 80:
-                return choice(const) + choice(special) + choice(vowel) + choice(vowel) + choice(special) + choice(special)
-        return choice(special) + choice(vowel) + choice(special) + choice(special)
+                return choice(const) + choice(
+                        special) + choice(vowel) + choice(
+                                vowel) + choice(special) + choice(special)
+        return choice(special) + choice(vowel) + choice(
+                special) + choice(special)
 
 
 def get(board, position): return board[position[1]][position[0]]
@@ -135,10 +145,11 @@ def clear(): os.system("clear || cls")
 
 def animate(board, miliseconds, debug=False, data=False):
         if debug and not DEBUG:
-                return 
+                return
         clear()
-        printb(board); 
-        if data: print(data)
+        printb(board)
+        if data:
+                print(data)
         sleep(miliseconds)
 
 
@@ -172,7 +183,8 @@ def findall(board, piece):
 def insert(board, sub, position):
         for y, line in enumerate(sub):
                 for x, piece in enumerate(line):
-                        put(board, (position[0] + x, position[1] + y), sub[y][x])
+                        put(board,
+                            (position[0] + x, position[1] + y), sub[y][x])
 
 
 def bisequal(board1, board2):
@@ -194,7 +206,8 @@ def checkfor(board, sub):
                 put(board, (x, y), "%")
                 put(board, (x, y), p)
                 try:
-                        if bisequal(getsub(board, (x, y), (len(sub[0]), len(sub))), sub):
+                        if bisequal(getsub(board, (x, y),
+                                           (len(sub[0]), len(sub))), sub):
                                 ret.append((x, y))
                 except IndexError:
                         continue
@@ -219,8 +232,10 @@ def collide(board, pos1, pos2):
                 p1, p2 = p2, p1
                 pos1, pos2 = pos2, pos1
         if p1 == PLAYER and p2 == DOOR:
-                if pos2 in UNDER: put(board, pos2, UNDER[pos2])
-                else: put(board, pos2, EMPTY)
+                if pos2 in UNDER:
+                        put(board, pos2, UNDER[pos2])
+                else:
+                        put(board, pos2, EMPTY)
 
 
 def insight(board, position1, position2):
@@ -238,7 +253,8 @@ def solvable(board):
                                 return infected
                         x, y = check.pop()
                         for nbr in [(x+1, y), (x-1, y), (x, y-1), (x, y+1)]:
-                                if nbr not in infected and get(board, nbr) not in TANG:
+                                if (nbr not in infected and get(
+                                                board, nbr) not in TANG):
                                         infected.append(nbr)
                                         check.append(nbr)
                 return False
@@ -248,12 +264,14 @@ def solvable(board):
 
 def newfloor(entry, lvl):
         board = (
-                STONE * max(min(randint(20, 20 + (3 * lvl)), 110), entry[0] + 2) + "\n"
+                STONE * max(min(randint(20, 20 + (3 * lvl)), 110),
+                            entry[0] + 2) + "\n"
         ) * max(min(randint(15, 15 + (1 * lvl)), 37), entry[1] + 2)
         board = board.splitlines()
         insert(board, [EMPTY * (len(board[0]) - 2)] * (len(board)-2), (1, 1))
         exit = randint(1, len(board[0])-2), randint(2, len(board)-2)
-        while sqrt((entry[0] - exit[0])**2 + (entry[1] - exit[1])**2) < len(board[0]) / 2:
+        while sqrt((entry[0] - exit[0])**2 + (
+                        entry[1] - exit[1])**2) < len(board[0]) / 2:
                 exit = randint(1, len(board[0])-2), randint(2, len(board)-2)
         put(board, exit, DWNSTR)
         put(board, entry, UPSTAIR)
@@ -262,15 +280,15 @@ def newfloor(entry, lvl):
 
 def makeroom(board, position, dimensions, lvl):
         w, h = dimensions
-        room = ( ( ( WALL * w ) + "\n" ) * h ).splitlines()
-        insert(room, [ FLOOR * (w - 2) ] * (h - 2), (1, 1))
+        room = (((WALL * w) + "\n") * h).splitlines()
+        insert(room, [FLOOR * (w - 2)] * (h - 2), (1, 1))
         for x in range(randint(2, 4)):
                 put(room, choice([n for n in findall(room, WALL)]), DOOR)
         insert(board, room, position)
 
 
 def pathfind(board):
-        """expects board with entrence, and exit and all empties (boarder okay)"""
+        """expects board with entrence, and exit and all empties"""
         empties = checkfor(board, EMPTY)
         while empties:
                 while solvable(board) and empties:
@@ -291,7 +309,9 @@ def scrub(board, limit=3):
                 x, y = slot
                 slot = getsub(board, slot, (limit, limit))
                 for n in range(6):
-                        put( slot,  choice([stone for stone in findall(slot, STONE)]), EMPTY )
+                        put(slot, choice(
+                                [stone for stone in findall(slot, STONE)]
+                        ), EMPTY)
                 insert(board, slot, (x, y))
                 animate(board, .001, debug=True)
                 slots = checkfor(board, [STONE * limit] * limit)
@@ -299,7 +319,9 @@ def scrub(board, limit=3):
         for stone in findall(board, STONE):
                 x, y = stone
                 try:
-                        nbrs = sum([get(board, pos) == EMPTY for pos in [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]])
+                        nbrs = sum([get(board, pos) == EMPTY for pos in [
+                                (x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)
+                        ]])
                 except IndexError:
                         nbrs = 0
                 animate(board, .001, debug=True)
@@ -316,9 +338,11 @@ def refine(board, lvl):
         b = scrub(sub)
         for stone in findall(b, STONE):
                 try:
-                        if get(b, (stone[0] + 1, stone[1])) == get(b, (stone[0] - 1, stone[1])) == EMPTY:
+                        if get(b, (stone[0] + 1, stone[1])) == get(
+                                        b, (stone[0] - 1, stone[1])) == EMPTY:
                                 put(b, stone, "+")
-                        if get(b, (stone[0], stone[1] + 1)) == get(b, (stone[0], stone[1] - 1)) == EMPTY:
+                        if get(b, (stone[0], stone[1] + 1)) == get(
+                                        b, (stone[0], stone[1] - 1)) == EMPTY:
                                 put(b, stone, "+")
                 except IndexError:
                         continue
@@ -390,7 +414,8 @@ def dig_dungeon(floors=15):
 
 LEVEL = 0
 board = LEVELS[LEVEL]
-dig_dungeon(floors=int(raw_input("Wesley's Roguelike\nHow many levels? (blank for 15): ")))
+dig_dungeon(floors=int(raw_input(
+        "Wesley's Roguelike\nHow many levels? (blank for 15): ")))
 data = "The Jeorney Begins"
 animate(board, .300, data=data)
 while True:
@@ -416,13 +441,21 @@ while True:
                         quit()
 
                 if cmd in ["L", "left"]:
-                        step(board, find(board, PLAYER), (-1, 0), under=True, lvl=LEVEL)
+                        step(board,
+                             find(board, PLAYER), (-1, 0),
+                             under=True, lvl=LEVEL)
                 if cmd in ["R", "right"]:
-                        step(board, find(board, PLAYER), (1, 0), under=True, lvl=LEVEL)
+                        step(board,
+                             find(board, PLAYER), (1, 0),
+                             under=True, lvl=LEVEL)
                 if cmd in ["U", "up"]:
-                        step(board, find(board, PLAYER), (0, -1), under=True, lvl=LEVEL)
+                        step(board,
+                             find(board, PLAYER), (0, -1),
+                             under=True, lvl=LEVEL)
                 if cmd in ["D", "down"]:
-                        step(board, find(board, PLAYER), (0, 1), under=True, lvl=LEVEL)
+                        step(board,
+                             find(board, PLAYER), (0, 1),
+                             under=True, lvl=LEVEL)
 
                 if cmd in ["Un", "under"]:
                         data += ", ".join(UNDER[LEVEL][find(board, PLAYER)])
@@ -444,13 +477,21 @@ while True:
 
                 if cmd in ["G", "get"]:
                         for piece in UNDER[LEVEL][find(board, PLAYER)]:
-                                if (find(board, PLAYER), piece) in ITEMS[LEVEL]:
-                                        UNDER[LEVEL][find(board, PLAYER)].remove(piece)
-                                        INV.append(ITEMS[LEVEL][(find(board, PLAYER), piece)])
+                                if (find(board, PLAYER), piece) in ITEMS[
+                                                LEVEL]:
+                                        UNDER[LEVEL][
+                                                find(board, PLAYER)
+                                        ].remove(piece)
+                                        INV.append(ITEMS[LEVEL][
+                                                (find(board, PLAYER), piece)
+                                        ])
 
                 if cmd in ["W", "warp"]:  # and DEBUG:
-                        put(board, find(board, PLAYER), UNDER[LEVEL][find(board, PLAYER)].pop(), under=True, lvl=LEVEL)
-                        put(board, find(board, DWNSTR), PLAYER, under=True, lvl=LEVEL)
+                        put(board, find(board, PLAYER),
+                            UNDER[LEVEL][find(board, PLAYER)].pop(),
+                            under=True, lvl=LEVEL)
+                        put(board, find(board, DWNSTR), PLAYER,
+                            under=True, lvl=LEVEL)
 
                 if cmd in ["S", "stairs"]:
                         pos = find(board, PLAYER)
@@ -462,7 +503,10 @@ while True:
                                                 quit()
                                 elif DWNSTR in UNDER[LEVEL][pos]:
                                         LEVEL += 1
-                                        put(LEVELS[LEVEL], find(LEVELS[LEVEL], UPSTAIR), PLAYER, under=True, lvl=LEVEL)
+                                        put(LEVELS[LEVEL],
+                                            find(LEVELS[LEVEL], UPSTAIR),
+                                            PLAYER,
+                                            under=True, lvl=LEVEL)
 
                 board = LEVELS[LEVEL]
                 animate(board, .300, data=data)
