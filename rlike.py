@@ -17,6 +17,11 @@ x write line-of-sight function
 x darken level (so you only see where theres light)
 . batteries
 . flashlight
+. pickaxe
+. drill
+. throw command
+. potions
+. scrolls
 
 Ongoing:
 . clean everything the f up
@@ -67,7 +72,7 @@ TANG = STONE + WALL + DOOR  # Tangible
 ACT = PLAYER + DOOR + FIGHTABLE
 GETTABLE = WEAP + ARMOR + CONSUME
 
-INLIGHT = []
+INLIGHT = [set()]
 
 START = """###########
 #         #
@@ -252,6 +257,7 @@ def collide(board, pos1, pos2):
 
 
 def insight(board, position1, position2, dist=10):
+        # maybe re write at some point, i have a feeling i can optomize
         if getdist(position1, position2) > dist:
                 return False
         x1, y1 = position1
@@ -287,13 +293,16 @@ def insight(board, position1, position2, dist=10):
         return True
 
 
-def getlit(board, lights):  # 420 blaze it
+def getlit(board, lights, lvl):  # 420 blaze it
+        global INLIGHT
         s = ""
         for y, line in enumerate(board):
                 for x, piece in enumerate(line):
-                        if True in [insight(
-                                        board, pos, (x, y), dist
-                        ) for pos, dist in lights]:
+                        if (x, y) not in INLIGHT[lvl]:
+                                for light, dis in lights:
+                                        if insight(board, light, (x, y), dis):
+                                                INLIGHT[lvl].add((x, y))
+                        if (x, y) in INLIGHT[lvl]:
                                 s += piece
                         else:
                                 s += DARK
@@ -451,11 +460,13 @@ LEVELS = [START]
 
 
 def dig_dungeon(floors=15):
-        global UNDER, ENEMIES, ITEMS, LEVELS, END
+        global INLIGHT, UNDER, ENEMIES, ITEMS, LEVELS, END
         LEVEL = 0
         UNDER += [{}] * (floors + 1)
         ITEMS += [{}] * (floors + 1)
         ENEMIES += [{}] * (floors + 1)
+        for x in range(floors + 1):
+                INLIGHT.append(set())
         while floors:
                 animate(["Digging Dungeon...", "floor " + str(LEVEL)], 0)
                 floors -= 1
@@ -475,13 +486,13 @@ board = LEVELS[LEVEL]
 dig_dungeon(floors=int(raw_input(
         "Wesley's Roguelike\nHow many levels? (blank for 15): ")))
 data = "The Jeorney Begins"
-animate(getlit(board, [(find(board, PLAYER), 10)]), .300, data=data)
+animate(getlit(board, [(find(board, PLAYER), 10)], LEVEL), .300, data=data)
 while True:
         if LEVEL > len(LEVELS):
                 break
         cmds = raw_input(": ").split()[::-1]
         while cmds:
-                data = "HP: " + str(HP) + " Weapon: "
+                data = "LEVEL: " + str(LEVEL) + " HP: " + str(HP) + " Weapon: "
                 if EQUIP['weapn']:
                         data += EQUIP["weapn"]['name']
                 else:
@@ -568,4 +579,5 @@ while True:
 
                 board = LEVELS[LEVEL]
                 animate(getlit(
-                        board, [(find(board, PLAYER), 10)]), .300, data=data)
+                        board, [(find(board, PLAYER), 10)], LEVEL),
+                        .300, data=data)
