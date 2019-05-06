@@ -8,13 +8,14 @@ PS: I hate pep8
 TO DO LIST:
 . enemy implementation
 . fighting implementation
-. armor item implementation
+x armor item implementation
 x UNDER player duplication bug fix
      bug was in step(), was placing
      what was under player with 'under' flag on
 x write line-of-sight function
      looks great! :)
 x darken level (so you only see where theres light)
+     decided to keep level lit once seen
 . batteries
 . flashlight
 . pickaxe
@@ -26,6 +27,9 @@ x darken level (so you only see where theres light)
 Ongoing:
 . clean everything the f up
 . try to optomize level builder
+Also:
+x added gold
+x items spawn in rooms, 40% sword, 40% armor, 8% both, 2% nither
 """
 from __future__ import print_function, unicode_literals
 import os
@@ -35,21 +39,6 @@ from time import sleep
 from math import sqrt
 DEBUG = "-d" in sys.argv
 
-COLORS = {
-        "@": "\033[1;45;93m",
-        ">": "\033[1;45;33m",
-        "<": "\033[1;45;33m",
-        "+": "\033[1;94;40m",
-        "#": "\033[1;90;40m",
-        "=": "\033[1;43;40m",
-        " ": "\033[45m",
-        ".": "\033[1;45;35m",
-        "/": "\033[1;45;96m",
-
-        "\n": "\033[0m",
-        "Q": "\033[0m",
-        "footer": "\033[0m",
-}
 PLAYER = "@"
 DWNSTR = ">"
 UPSTAIR = "<"
@@ -58,18 +47,38 @@ WALL = "+"
 DOOR = "="
 EMPTY = " "
 FLOOR = "."
-STAFF = "/"
 DARK = "Q"
 
+GOLD = "*"
+STAFF = "/"
+PICKAXE = "{"
 BOW = ")"
 BATTERY = "%"
-ARMOR = "}"
+ARMOR = "["
+
+COLORS = {
+        PLAYER: "\033[1;45;93m",
+        DWNSTR: "\033[1;45;33m",
+        UPSTAIR: "\033[1;45;33m",
+        WALL: "\033[1;94;40m",
+        STONE: "\033[1;90;40m",
+        DOOR: "\033[1;43;40m",
+        EMPTY: "\033[45m",
+        FLOOR: "\033[1;45;35m",
+        STAFF: "\033[1;45;96m",
+        ARMOR: "\033[1;45;96m",
+        GOLD: "\033[1;33;35m",
+
+        DARK: "\033[0m",
+        "\n": "\033[0m",
+        "footer": "\033[0m",
+}
 
 CONSUME = "bcdfghjklmnprstvwxyz" + BATTERY
 WEAP = STAFF + BOW
 FIGHTABLE = "BCDFGHJKLMNPRSTVWXYZ"
 TANG = STONE + WALL + DOOR  # Tangible
-ACT = PLAYER + DOOR + FIGHTABLE
+ACT = PLAYER + DOOR + FIGHTABLE + GOLD
 GETTABLE = WEAP + ARMOR + CONSUME
 
 INLIGHT = [set()]
@@ -91,6 +100,7 @@ END = """##########
 
 LEVELS = [START]
 LEVEL = 0
+SCORE = 0
 
 # these are a dictionary of names and info for each level
 ENEMIES = [{}]
@@ -134,6 +144,19 @@ def makename():
                                 vowel) + choice(special) + choice(special)
         return choice(special) + choice(vowel) + choice(
                 special) + choice(special)
+
+
+def makeitem(ch, lvl):
+        name = makename()
+        if ch == STAFF:
+                name = "Sword of " + name
+        elif ch == ARMOR:
+                name = "Suit of " + name + " Armor"
+        return {
+                "name": name,
+                "stat": lvl + randint(-2, 10),
+                "char": ch,
+        }
 
 
 def get(board, position): return board[position[1]][position[0]]
@@ -250,15 +273,18 @@ def step(board, position, direction, under=False, lvl=0):
 
 
 def collide(board, pos1, pos2):
+        global SCORE
         p1, p2 = get(board, pos1), get(board, pos2)
         if p2 == PLAYER != p1:
                 p1, p2 = p2, p1
                 pos1, pos2 = pos2, pos1
-        if p1 == PLAYER and p2 == DOOR:
+        if p1 == PLAYER and p2 in [DOOR, GOLD]:
                 if pos2 in UNDER:
                         put(board, pos2, UNDER[pos2])
                 else:
                         put(board, pos2, EMPTY)
+        if p1 == PLAYER and p2 == GOLD:
+                SCORE += 10
 
 
 def insight(board, position1, position2, dist=10):
@@ -331,7 +357,7 @@ def solvable(board):
                                         infected.append(nbr)
                                         check.append(nbr)
                 return False
-        except IndexError:
+        except IndexError:  # walk off ledge
                 return False
 
 
@@ -361,6 +387,7 @@ def makeroom(board, position, dimensions, lvl):
 
 def pathfind(board):
         """expects board with entrence, and exit and all empties"""
+        # can definetly optomize, thinking, check only what solvable returns?
         empties = checkfor(board, EMPTY)
         while empties:
                 while solvable(board) and empties:
@@ -375,6 +402,7 @@ def pathfind(board):
 
 
 def scrub(board, limit=3):
+        # hopefully i'll optomize this in a streak of brilliance
         slots = checkfor(board, [STONE * limit] * limit)
         while slots:
                 slot = choice(slots)
@@ -423,18 +451,36 @@ def refine(board, lvl):
 
 
 def populate(board, lvl):
+        global ITEMS
+        empties = checkfor(board, EMPTY)
+        room = checkfor(board, FLOOR)
+        roll = randint(0, 100)
+        items = []
+        if roll > 49:
+                items.append(makeitem(STAFF, lvl))
+        if roll < 60:
+                items.append(makeitem(ARMOR, lvl))
+        if 50 <= roll <= 51:
+                items = []
+        for item in items:
+                pos = choice(room)
+                room.remove(pos)
+                ITEMS[lvl][(pos, item['char'])] = item
+                put(board, pos, item['char'], under=True, lvl=lvl)
+        for x in range(randint(10, 15 + 15 * (lvl > 10))):
+                put(board, choice(empties), GOLD)
         return board
 
 
 def dequip(item):
         global ATK, DEF
-        if EQUIP["weap"] == item:
+        if EQUIP["weapn"] == item:
                 INV.append(item)
-                EQUIP["weap"] = None
+                EQUIP["weapn"] = None
                 ATK -= item['stat']
         elif EQUIP["armor"] == item:
                 INV.append(item)
-                EQUIP["weap"] = None
+                EQUIP["armor"] = None
                 DEF -= item['stat']
         else:
                 return "not equipted"
@@ -497,7 +543,8 @@ while True:
                 break
         cmds = raw_input(": ").split()[::-1]
         while cmds:
-                data = "LEVEL: " + str(LEVEL) + " HP: " + str(HP) + " Weapon: "
+                data = "LEVEL: " + str(LEVEL) + " GOLD: " + str(SCORE)
+                data += " \nHP: " + str(HP) + " Weapon: "
                 if EQUIP['weapn']:
                         data += EQUIP["weapn"]['name']
                 else:
@@ -571,15 +618,19 @@ while True:
                         pos = find(board, PLAYER)
                         if pos in UNDER[LEVEL]:
                                 if UPSTAIR in UNDER[LEVEL][pos]:
+                                        put(board, pos,
+                                            UNDER[LEVEL][pos].pop())
                                         LEVEL -= 1
+                                        put(LEVELS[LEVEL], pos, PLAYER,
+                                            under=True, lvl=LEVEL)
                                         if LEVEL < 0:
                                                 print("Farewell traveler")
                                                 quit()
                                 elif DWNSTR in UNDER[LEVEL][pos]:
+                                        put(board, pos,
+                                            UNDER[LEVEL][pos].pop())
                                         LEVEL += 1
-                                        put(LEVELS[LEVEL],
-                                            find(LEVELS[LEVEL], UPSTAIR),
-                                            PLAYER,
+                                        put(LEVELS[LEVEL], pos, PLAYER,
                                             under=True, lvl=LEVEL)
 
                 board = LEVELS[LEVEL]
