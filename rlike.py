@@ -9,7 +9,9 @@ TO DO LIST:
 . enemy implementation
 . fighting implementation
 . armor item implementation
-. UNDER player duplication bug fix
+x UNDER player duplication bug fix
+     bug was in step(), was placing
+     what was under player with 'under' flag on
 . write line-of-sight function
 . darken level (so you only see where theres light)
 . batteries
@@ -222,7 +224,7 @@ def step(board, position, direction, under=False, lvl=0):
                 collide(board, position, (x2, y2))
         if nxt in TANG:
                 return
-        put(board, position, UNDER[lvl][position].pop(), under=under, lvl=lvl)
+        put(board, position, UNDER[lvl][position].pop())
         put(board, (x2, y2), piece, under=under, lvl=lvl)
 
 
