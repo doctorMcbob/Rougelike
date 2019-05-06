@@ -12,8 +12,9 @@ TO DO LIST:
 x UNDER player duplication bug fix
      bug was in step(), was placing
      what was under player with 'under' flag on
-. write line-of-sight function
-. darken level (so you only see where theres light)
+x write line-of-sight function
+     looks great! :)
+x darken level (so you only see where theres light)
 . batteries
 . flashlight
 
@@ -78,7 +79,7 @@ START = """###########
 END = """##########
 #    Wow #
 #  <     #
-##########
+# .,.,., #
 # TheEnd #
 ##########""".splitlines()
 
@@ -250,9 +251,39 @@ def collide(board, pos1, pos2):
                         put(board, pos2, EMPTY)
 
 
-def insight(board, position1, position2, dist=4):
+def insight(board, position1, position2, dist=10):
         if getdist(position1, position2) > dist:
                 return False
+        x1, y1 = position1
+        x2, y2 = position2
+        while (x1, y1) != (x2, y2):
+                if x1 - x2 == 0:
+                        y1 += 1 if y1 < y2 else -1
+                elif y1 - y2 == 0:
+                        x1 += 1 if x1 < x2 else -1
+                else:
+                        if abs(x1 - x2) > abs(y1 - y2):
+                                x1 += 1 if x1 < x2 else -1
+                        elif abs(y1 - y2) > abs(x1 - x2):
+                                y1 += 1 if y1 < y2 else -1
+                        else:
+                                c = 0
+                                if x1 < x2:
+                                        if get(board, (x1 + 1, y1)) in TANG:
+                                                c += 1
+                                elif get(board, (x1 - 1, y1)) in TANG:
+                                        c += 1
+                                if y1 < y2:
+                                        if get(board, (x1, y1 + 1)) in TANG:
+                                                c += 1
+                                elif get(board, (x1, y1 - 1)) in TANG:
+                                        c += 1
+                                if c == 2:
+                                        return False
+                                x1 += 1 if x1 < x2 else -1
+                                y1 += 1 if y1 < y2 else -1
+                if get(board, (x1, y1)) in TANG and (x1, y1) != (x2, y2):
+                        return False
         return True
 
 
@@ -321,7 +352,7 @@ def pathfind(board):
                 while solvable(board) and empties:
                         pos = choice(empties)
                         insert(board, STONE, pos)
-                        animate(board, 0.001, data=pos, debug=True)
+                        animate(board, 0.01, data=pos, debug=True)
                         empties = checkfor(board, EMPTY)
                 put(board, pos, FLOOR)
         for pos in findall(board, FLOOR):
@@ -444,7 +475,7 @@ board = LEVELS[LEVEL]
 dig_dungeon(floors=int(raw_input(
         "Wesley's Roguelike\nHow many levels? (blank for 15): ")))
 data = "The Jeorney Begins"
-animate(board, .300, data=data)
+animate(getlit(board, [(find(board, PLAYER), 10)]), .300, data=data)
 while True:
         if LEVEL > len(LEVELS):
                 break
@@ -537,4 +568,4 @@ while True:
 
                 board = LEVELS[LEVEL]
                 animate(getlit(
-                        board, [(find(board, PLAYER), 4)]), .300, data=data)
+                        board, [(find(board, PLAYER), 10)]), .300, data=data)
