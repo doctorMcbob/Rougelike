@@ -47,7 +47,7 @@ WALL = "+"
 DOOR = "="
 EMPTY = " "
 FLOOR = "."
-DARK = "Q"
+DARK = "\\"
 
 GOLD = "*"
 STAFF = "/"
@@ -85,7 +85,7 @@ INLIGHT = [set()]
 
 START = """###########
 #         #
-#  < / >  #
+#  <   >  #
 #    @    #
 #         #
 ###########""".splitlines()
@@ -530,7 +530,22 @@ def dig_dungeon(floors=15):
 
 
 board = LEVELS[LEVEL]
-floors = raw_input("Wesley's Roguelike\nHow many levels? (blank for 15): ")
+clear()
+floors = raw_input(colored("""Welcome to the Dungeon of LURD                   ,
+COMMANDS:                                        ,
+. L: Left  . S: Stairs . Q: Quit                 ,
+. U: Up    . G: Get    . Un: check Under         ,
+. R: Right . Dr: Drop  . Inv: check Inventory    ,
+. D: Down  . Eq: Equip . H: Help (thats this)    ,
+                                                 ,
+SPRITES:                                         ,
+. @: You   . >: Downward   . /: Weapon           ,
+. #: Stone . <: Upward     . [: Armor            ,
+. +: Wall      staircase   .  : Empty            ,
+. =: Door  . *: Gold       . .: Floor            ,
+                                                 ,
+Time to build the dungeon.                       ,
+How many levels deep? (blank for 15): """))
 if floors:
         dig_dungeon(int(floors))
 else:
@@ -561,17 +576,31 @@ while True:
                                         printb(b)
                         quit()
 
+                if cmd in ["H", "help"]:
+                        data += """
+COMMANDS:
+. L: Left  . S: Stairs . Q: Quit
+. U: Up    . G: Get    . Un: check Under
+. R: Right . Dr: Drop  . Inv: check Inventory
+. D: Down  . Eq: Equip . H: Help (thats this)
+
+SPRITES:
+. @: You   . >: Downward   . /: Weapon
+. #: Stone . <: Upward     . [: Armor
+. +: Wall      staircase   .  : Empty
+. =: Door  . *: Gold       . .: Floor
+"""
                 if cmd in ["L", "left"]:
                         step(board,
                              find(board, PLAYER), (-1, 0),
                              under=True, lvl=LEVEL)
-                if cmd in ["R", "right"]:
-                        step(board,
-                             find(board, PLAYER), (1, 0),
-                             under=True, lvl=LEVEL)
                 if cmd in ["U", "up"]:
                         step(board,
                              find(board, PLAYER), (0, -1),
+                             under=True, lvl=LEVEL)
+                if cmd in ["R", "right"]:
+                        step(board,
+                             find(board, PLAYER), (1, 0),
                              under=True, lvl=LEVEL)
                 if cmd in ["D", "down"]:
                         step(board,
@@ -582,8 +611,10 @@ while True:
                         data += ", ".join(UNDER[LEVEL][find(board, PLAYER)])
 
                 if cmd in ["Inv", "inventory"]:
-                        data += ", ".join([item["name"] for item in INV])
-
+                        if INV:
+                                data += "refrence by number\n"
+                        for n, item in enumerate(INV):
+                                data += str(n) + ": " + item['name'] + "\n"
                 if cmd in ["stats"]:
                         data += "Atk: " + str(ATK) + "\nDef: " + str(DEF)
 
@@ -592,9 +623,11 @@ while True:
                                 eq = cmds.pop()
                         else:
                                 eq = raw_input("Equipt what? : ")
-                        for item in INV:
-                                if item["name"] == eq:
+                        for n, item in enumerate(INV):
+                                if eq in [item['name'], str(n)]:
                                         data += str(equip(item))
+                                else:
+                                        data += "Nothing found under " + eq
 
                 if cmd in ["G", "get"]:
                         for piece in UNDER[LEVEL][find(board, PLAYER)]:
@@ -606,8 +639,9 @@ while True:
                                         INV.append(ITEMS[LEVEL][
                                                 (find(board, PLAYER), piece)
                                         ])
+                                        data += "got " + INV[-1]['name']
 
-                if cmd in ["W", "warp"]:  # and DEBUG:
+                if cmd in ["W", "warp"] and DEBUG:
                         put(board, find(board, PLAYER),
                             UNDER[LEVEL][find(board, PLAYER)].pop(),
                             under=True, lvl=LEVEL)
@@ -632,6 +666,21 @@ while True:
                                         LEVEL += 1
                                         put(LEVELS[LEVEL], pos, PLAYER,
                                             under=True, lvl=LEVEL)
+
+                if cmd in ["Dr", "Drop"]:
+                        if cmds:
+                                dr = cmds.pop()
+                        else:
+                                dr = raw_input("Drop what? : ")
+                        for n, item in enumerate(INV):
+                                if dr in [item['name'], str(n)]:
+                                        INV.remove(item)
+                                        ITEMS[LEVEL][(
+                                                find(board, PLAYER),
+                                                item['char'])] = item
+                                        UNDER[LEVEL][
+                                                find(board, PLAYER)
+                                        ].append(item['char'])
 
                 board = LEVELS[LEVEL]
                 animate(getlit(
