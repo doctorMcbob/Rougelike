@@ -6,7 +6,7 @@ board[y][x] for example
 PS: I hate pep8
 
 TO DO LIST:
-. enemy implementation
+/ enemy implementation
 . fighting implementation
 x armor item implementation
 x UNDER player duplication bug fix
@@ -68,6 +68,7 @@ COLORS = {
         STAFF: "\033[1;45;96m",
         ARMOR: "\033[1;45;96m",
         GOLD: "\033[1;33;35m",
+        "ENEMY": "\033[1;45;91m",
 
         DARK: "\033[0m",
         "\n": "\033[0m",
@@ -104,12 +105,8 @@ SCORE = 0
 
 # these are a dictionary of names and info for each level
 ENEMIES = [{}]
-UNDER = [{(5, 3): [" "], (5, 2): [" "]}]
-ITEMS = [{((5, 2), STAFF): {
-        "name": "Pole",
-        "stat": 2,
-        "char": STAFF,
-}}]
+UNDER = [{(5, 3): [" "]}]
+ITEMS = [{}]
 
 INV = []
 HP = 100
@@ -159,6 +156,18 @@ def makeitem(ch, lvl):
         }
 
 
+def makeenemy(lvl):
+        name = makename()
+        return {
+                "name": name,
+                "type": choice(["agg", "hide", "sleep"]),
+                "HP": max(2, lvl + randint(-5, 10)),
+                "ATK": max(2, lvl + randint(-5, 5)),
+                "DEF": max(2, lvl + randint(-5, 5)),
+                "char": name[0].upper()
+        }
+
+
 def get(board, position): return board[position[1]][position[0]]
 
 
@@ -197,15 +206,18 @@ def animate(board, miliseconds, debug=False, data=False):
         sleep(miliseconds)
 
 
-def colored(st):
+def colored(st, menu=False):
         ret = ""
         for p in st:
-                if p == DARK:
-                        ret += COLORS[p] + EMPTY + COLORS['footer']
+                if p == DARK and not menu:
+                        ret += COLORS[p] + EMPTY
                 elif p in COLORS:
-                        ret += COLORS[p] + p + COLORS['footer']
+                        ret += COLORS[p] + p
+                elif p in FIGHTABLE and not menu:
+                        ret += COLORS["ENEMY"] + p
                 else:
-                        ret += COLORS[EMPTY] + p + COLORS['footer']
+                        ret += COLORS[EMPTY] + p
+                ret += COLORS['footer']
         return ret + COLORS['footer']
 
 
@@ -265,26 +277,56 @@ def step(board, position, direction, under=False, lvl=0):
         nxt = get(board, (x2, y2))
         piece = get(board, position)
         if (piece in ACT) and (nxt in ACT):
-                collide(board, position, (x2, y2))
+                return collide(board, position, (x2, y2), LEVEL)
         if nxt in TANG:
-                return
+                return ""
         put(board, position, UNDER[lvl][position].pop())
         put(board, (x2, y2), piece, under=under, lvl=lvl)
+        return ""
 
 
-def collide(board, pos1, pos2):
-        global SCORE
+def collide(board, pos1, pos2, lvl):
+        global SCORE, ENEMIES, HP
+        data = ""
         p1, p2 = get(board, pos1), get(board, pos2)
         if p2 == PLAYER != p1:
                 p1, p2 = p2, p1
                 pos1, pos2 = pos2, pos1
         if p1 == PLAYER and p2 in [DOOR, GOLD]:
                 if pos2 in UNDER:
-                        put(board, pos2, UNDER[pos2])
+                        put(board, pos2, UNDER[pos2], under=True, lvl=lvl)
                 else:
-                        put(board, pos2, EMPTY)
+                        put(board, pos2, EMPTY, under=True, lvl=lvl)
         if p1 == PLAYER and p2 == GOLD:
                 SCORE += 10
+                data += "got 10 gold\n"
+                put(board, pos1, UNDER[lvl][pos1].pop())
+                put(board, pos2, p1, under=True, lvl=lvl)
+        if p1 == PLAYER and p2 in FIGHTABLE and (pos2, p2) in ENEMIES[lvl]:
+                enemy = ENEMIES[lvl][(pos2, p2)]
+                roll = randint(0, 100)
+                if roll < 15:
+                        data += "you miss the " + enemy['name']
+                        data += "[ " + str(enemy['HP']) + " ]\n"
+                else:
+                        data += "you hit the " + enemy['name']
+                        data += "[ " + str(enemy['HP']) + " ]\n"
+                        if randint(0, 50):
+                                dmg = max(ATK - enemy['DEF'], 1)
+                        else:
+                                data += "critical hit!\n"
+                                dmg = 100
+                        enemy['HP'] -= dmg
+        if p1 in FIGHTABLE and (pos1, p1) in ENEMIES[lvl] and p2 == PLAYER:
+                enemy = ENEMIES[lvl][(pos1, p1)]
+                roll = randint(0, 100)
+                if roll > 15:
+                        data += "the " + enemy['name'] + " misses you\n"
+                else:
+                        data += "the " + enemy['name'] + " hits you\n"
+                        dmg = max(enemy['ATK'] - DEF, 1)
+                        HP -= dmg
+        return data
 
 
 def insight(board, position1, position2, dist=10):
@@ -451,10 +493,11 @@ def refine(board, lvl):
 
 
 def populate(board, lvl):
-        global ITEMS
+        global ITEMS, ENEMIES
         empties = checkfor(board, EMPTY)
         room = checkfor(board, FLOOR)
         roll = randint(0, 100)
+        # load items into room
         items = []
         if roll > 49:
                 items.append(makeitem(STAFF, lvl))
@@ -467,8 +510,18 @@ def populate(board, lvl):
                 room.remove(pos)
                 ITEMS[lvl][(pos, item['char'])] = item
                 put(board, pos, item['char'], under=True, lvl=lvl)
+        # load gold
         for x in range(randint(10, 15 + 15 * (lvl > 10))):
-                put(board, choice(empties), GOLD)
+                pos = choice(empties)
+                empties.remove(pos)
+                put(board, pos, GOLD, under=True, lvl=lvl)
+        # load enemies
+        enemies = [makeenemy(lvl) for x in range(lvl + 5, lvl + 10)]
+        for enemy in enemies:
+                pos = choice(empties)
+                empties.remove(pos)
+                ENEMIES[lvl][(pos, enemy['char'])] = enemy
+                put(board, pos, enemy['char'], under=True, lvl=lvl)
         return board
 
 
@@ -505,6 +558,21 @@ def equip(item):
                 EQUIP["armor"] = item
                 DEF += item["stat"]
         return "Equipted " + item["name"]
+
+
+def boardsturn(board, lvl):
+        global ENEMIES
+        dead = []
+        for pos, ch in ENEMIES[lvl]:
+                enemy = ENEMIES[lvl][(pos, ch)]
+                if enemy["HP"] <= 0:
+                        dead.append((pos, ch))
+                        if pos in UNDER[lvl]:
+                                put(board, pos, UNDER[lvl][pos].pop())
+                        else:
+                                put(board, pos, EMPTY, under=True, lvl=lvl)
+        for enemy in dead:
+                ENEMIES[lvl].pop(enemy)
 
 
 def dig_dungeon(floors=15):
@@ -545,7 +613,7 @@ SPRITES:                                         ,
 . =: Door  . *: Gold       . .: Floor            ,
                                                  ,
 Time to build the dungeon.                       ,
-How many levels deep? (blank for 15): """))
+How many levels deep? (blank for 15): """, menu=True))
 if floors:
         dig_dungeon(int(floors))
 else:
@@ -591,21 +659,21 @@ SPRITES:
 . =: Door  . *: Gold       . .: Floor
 """
                 if cmd in ["L", "left"]:
-                        step(board,
-                             find(board, PLAYER), (-1, 0),
-                             under=True, lvl=LEVEL)
+                        data += step(board,
+                                     find(board, PLAYER), (-1, 0),
+                                     under=True, lvl=LEVEL)
                 if cmd in ["U", "up"]:
-                        step(board,
-                             find(board, PLAYER), (0, -1),
-                             under=True, lvl=LEVEL)
+                        data += step(board,
+                                     find(board, PLAYER), (0, -1),
+                                     under=True, lvl=LEVEL)
                 if cmd in ["R", "right"]:
-                        step(board,
-                             find(board, PLAYER), (1, 0),
-                             under=True, lvl=LEVEL)
+                        data += step(board,
+                                     find(board, PLAYER), (1, 0),
+                                     under=True, lvl=LEVEL)
                 if cmd in ["D", "down"]:
-                        step(board,
-                             find(board, PLAYER), (0, 1),
-                             under=True, lvl=LEVEL)
+                        data += step(board,
+                                     find(board, PLAYER), (0, 1),
+                                     under=True, lvl=LEVEL)
 
                 if cmd in ["Un", "under"]:
                         data += ", ".join(UNDER[LEVEL][find(board, PLAYER)])
@@ -691,4 +759,8 @@ SPRITES:
                 board = LEVELS[LEVEL]
                 animate(getlit(
                         board, [(find(board, PLAYER), 10)], LEVEL),
-                        .300, data=data)
+                        .150, data=data)
+                boardsturn(board, LEVEL)
+                animate(getlit(
+                        board, [(find(board, PLAYER), 10)], LEVEL),
+                        .150, data=data)
