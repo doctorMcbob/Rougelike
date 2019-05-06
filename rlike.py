@@ -88,13 +88,18 @@ END = """##########
 # TheEnd #
 ##########""".splitlines()
 
+
+LEVELS = [START]
+LEVEL = 0
+
+# these are a dictionary of names and info for each level
 ENEMIES = [{}]
 UNDER = [{(5, 3): [" "], (5, 2): [" "]}]
 ITEMS = [{((5, 2), STAFF): {
         "name": "Pole",
         "stat": 2,
         "char": STAFF,
-}}]  # a dictionary of names and info, ITEMS[(x, y, THING)]
+}}]
 
 INV = []
 HP = 100
@@ -456,9 +461,6 @@ def equip(item):
         return "Equipted " + item["name"]
 
 
-LEVELS = [START]
-
-
 def dig_dungeon(floors=15):
         global INLIGHT, UNDER, ENEMIES, ITEMS, LEVELS, END
         LEVEL = 0
@@ -481,10 +483,13 @@ def dig_dungeon(floors=15):
         insert(LEVELS[-1], END, (entry[0] - 2, entry[1] - 2))
 
 
-LEVEL = 0
 board = LEVELS[LEVEL]
-dig_dungeon(floors=int(raw_input(
-        "Wesley's Roguelike\nHow many levels? (blank for 15): ")))
+floors = raw_input("Wesley's Roguelike\nHow many levels? (blank for 15): ")
+if floors:
+        dig_dungeon(int(floors))
+else:
+        dig_dungeon()
+
 data = "The Jeorney Begins"
 animate(getlit(board, [(find(board, PLAYER), 10)], LEVEL), .300, data=data)
 while True:
