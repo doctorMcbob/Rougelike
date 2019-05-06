@@ -39,7 +39,9 @@ COLORS = {
         " ": "\033[45m",
         ".": "\033[1;45;35m",
         "/": "\033[1;45;96m",
+
         "\n": "\033[0m",
+        "Q": "\033[0m",
         "footer": "\033[0m",
 }
 PLAYER = "@"
@@ -51,6 +53,7 @@ DOOR = "="
 EMPTY = " "
 FLOOR = "."
 STAFF = "/"
+DARK = "Q"
 
 BOW = ")"
 BATTERY = "%"
@@ -62,6 +65,8 @@ FIGHTABLE = "BCDFGHJKLMNPRSTVWXYZ"
 TANG = STONE + WALL + DOOR  # Tangible
 ACT = PLAYER + DOOR + FIGHTABLE
 GETTABLE = WEAP + ARMOR + CONSUME
+
+INLIGHT = []
 
 START = """###########
 #         #
@@ -142,6 +147,9 @@ def put(board, position, piece, under=False, lvl=None):
         board[y] = board[y][:x] + piece + board[y][x + 1:]
 
 
+def getdist(p1, p2): return sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
+
+
 def clear(): os.system("clear || cls")
 
 
@@ -158,7 +166,9 @@ def animate(board, miliseconds, debug=False, data=False):
 def colored(st):
         ret = ""
         for p in st:
-                if p in COLORS:
+                if p == DARK:
+                        ret += COLORS[p] + EMPTY + COLORS['footer']
+                elif p in COLORS:
                         ret += COLORS[p] + p + COLORS['footer']
                 else:
                         ret += COLORS[EMPTY] + p + COLORS['footer']
@@ -240,8 +250,24 @@ def collide(board, pos1, pos2):
                         put(board, pos2, EMPTY)
 
 
-def insight(board, position1, position2):
-        pass
+def insight(board, position1, position2, dist=4):
+        if getdist(position1, position2) > dist:
+                return False
+        return True
+
+
+def getlit(board, lights):  # 420 blaze it
+        s = ""
+        for y, line in enumerate(board):
+                for x, piece in enumerate(line):
+                        if True in [insight(
+                                        board, pos, (x, y), dist
+                        ) for pos, dist in lights]:
+                                s += piece
+                        else:
+                                s += DARK
+                s += "\n"
+        return s.splitlines()
 
 
 def solvable(board):
@@ -272,8 +298,7 @@ def newfloor(entry, lvl):
         board = board.splitlines()
         insert(board, [EMPTY * (len(board[0]) - 2)] * (len(board)-2), (1, 1))
         exit = randint(1, len(board[0])-2), randint(2, len(board)-2)
-        while sqrt((entry[0] - exit[0])**2 + (
-                        entry[1] - exit[1])**2) < len(board[0]) / 2:
+        while getdist(entry, exit) < len(board[0]) / 2:
                 exit = randint(1, len(board[0])-2), randint(2, len(board)-2)
         put(board, exit, DWNSTR)
         put(board, entry, UPSTAIR)
@@ -511,4 +536,5 @@ while True:
                                             under=True, lvl=LEVEL)
 
                 board = LEVELS[LEVEL]
-                animate(board, .300, data=data)
+                animate(getlit(
+                        board, [(find(board, PLAYER), 4)]), .300, data=data)
