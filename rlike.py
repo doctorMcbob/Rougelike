@@ -329,38 +329,53 @@ def collide(board, pos1, pos2, lvl):
         return data
 
 
+def directto(pos1, pos2):
+        """the direction you should go to be closer from point 1 to point 2"""
+        x1, y1 = pos1
+        x2, y2 = pos2
+        if x1 - x2 == 0:
+                return (0, 1) if (y1 - y2) < 0 else (0, -1)
+        elif y1 - y2 == 0:
+                return (1, 0) if (x1 - x2) < 0 else (-1, 0)
+        else:
+                slope = max(
+                        abs(x1 - x2), abs(y1 - y2)
+                ) / min(
+                        abs(x1 - x2), abs(y1 - y2)
+                )
+                if abs(x1 - x2) > abs(y1 - y2):
+                        if (x1 - x2) % slope:
+                                return (1, 0) if (x1 - x2) < 0 else (-1, 0)
+                        else:
+                                return (0, 1) if (y1 - y2) < 0 else (0, -1)
+                elif abs(x1 - x2) <= abs(y1 - y2):
+                        if (y1 - y2) % slope:
+                                return (0, 1) if (y1 - y2) < 0 else (0, -1)
+                        else:
+                                return (1, 0) if (x1 - x2) < 0 else (-1, 0)
+
+
 def insight(board, position1, position2, dist=10):
-        # maybe re write at some point, i have a feeling i can optomize
         if getdist(position1, position2) > dist:
                 return False
-        x1, y1 = position1
-        x2, y2 = position2
+        x1, y1 = position2
+        x2, y2 = position1
+        flag = False
         while (x1, y1) != (x2, y2):
-                if x1 - x2 == 0:
-                        y1 += 1 if y1 < y2 else -1
-                elif y1 - y2 == 0:
-                        x1 += 1 if x1 < x2 else -1
-                else:
-                        if abs(x1 - x2) > abs(y1 - y2):
-                                x1 += 1 if x1 < x2 else -1
-                        elif abs(y1 - y2) > abs(x1 - x2):
-                                y1 += 1 if y1 < y2 else -1
+                d = directto((x1, y1), (x2, y2))
+                if d[0] and get(board, (x1 + d[0], y1)) in TANG:
+                        d = (0, 1) if (y1 - y2) < 0 else (0, -1)
+                        if not flag:
+                                flag = True
                         else:
-                                c = 0
-                                if x1 < x2:
-                                        if get(board, (x1 + 1, y1)) in TANG:
-                                                c += 1
-                                elif get(board, (x1 - 1, y1)) in TANG:
-                                        c += 1
-                                if y1 < y2:
-                                        if get(board, (x1, y1 + 1)) in TANG:
-                                                c += 1
-                                elif get(board, (x1, y1 - 1)) in TANG:
-                                        c += 1
-                                if c == 2:
-                                        return False
-                                x1 += 1 if x1 < x2 else -1
-                                y1 += 1 if y1 < y2 else -1
+                                return False
+                elif d[1] and get(board, (x1, y1 + d[1])) in TANG:
+                        d = (1, 0) if (x1 - x2) < 0 else (-1, 0)
+                        if not flag:
+                                flag = True
+                        else:
+                                return False
+                x1, y1 = x1 + d[0], y1 + d[1]
                 if get(board, (x1, y1)) in TANG and (x1, y1) != (x2, y2):
                         return False
         return True
@@ -565,12 +580,22 @@ def boardsturn(board, lvl):
         dead = []
         for pos, ch in ENEMIES[lvl]:
                 enemy = ENEMIES[lvl][(pos, ch)]
+                x, y = pos
                 if enemy["HP"] <= 0:
                         dead.append((pos, ch))
                         if pos in UNDER[lvl]:
                                 put(board, pos, UNDER[lvl][pos].pop())
                         else:
                                 put(board, pos, EMPTY, under=True, lvl=lvl)
+                nbrs = [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
+                if enemy['type'] == "sleep":
+                        pass
+                elif enemy['type'] == "agro" and insight(board, pos,
+                                                         find(board, PLAYER)):
+                        pass
+                if enemy['type'] == "hide":
+                        pass
+                nbrs
         for enemy in dead:
                 ENEMIES[lvl].pop(enemy)
 
