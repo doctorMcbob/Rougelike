@@ -6,8 +6,9 @@ board[y][x] for example
 PS: I hate pep8
 
 TO DO LIST:
-/ enemy implementation
-. fighting implementation
+x enemy implementation
+     / enemy turn (brain)
+/ fighting implementation
 x armor item implementation
 x UNDER player duplication bug fix
      bug was in step(), was placing
@@ -24,6 +25,11 @@ x darken level (so you only see where theres light)
 . potions
 . scrolls
 
+KNOWN BUGS:
+? sometimes find(board, PLAYER) is false which makes no sense
+! GOLD just moved like agg enemy??? how???
+      . I think an enemy moves onto gold and because they're both
+      in ACT they transfer
 Ongoing:
 . clean everything the f up
 . try to optomize level builder
@@ -85,7 +91,7 @@ GETTABLE = WEAP + ARMOR + CONSUME
 INLIGHT = [set()]
 
 START = """###########
-#         #
+#    R*   #
 #  <   >  #
 #    @    #
 #         #
@@ -98,18 +104,39 @@ END = """##########
 # TheEnd #
 ##########""".splitlines()
 
+HELP = """
+COMMANDS:                                        ,
+. L: Left  . S: Stairs . Q: Quit                 ,
+. U: Up    . G: Get    . Un: check Under         ,
+. R: Right . Dr: Drop  . Inv: check Inventory    ,
+. D: Down  . Eq: Equip . H: Help (thats this)    ,
+                                                 ,
+SPRITES:                                         ,
+. @: You   . >: Downward   . /: Weapon           ,
+. #: Stone . <: Upward     . [: Armor            ,
+. +: Wall      staircase   .  : Empty            ,
+. =: Door  . *: Gold       . .: Floor            ,
+
+"""
 
 LEVELS = [START]
 LEVEL = 0
 SCORE = 0
 
 # these are a dictionary of names and info for each level
-ENEMIES = [{}]
-UNDER = [{(5, 3): [" "]}]
+ENEMIES = [{((5, 1), "R"): {
+        "name": "Ralph",
+        "type": "agg",
+        "HP": 100,
+        "ATK": 3,
+        "DEF": 3,
+        "char": "R",
+}}]
+UNDER = [{(5, 3): [" "], (5, 1): [" "]}]
 ITEMS = [{}]
 
 INV = []
-HP = 100
+HP = 50
 ATK = 1
 DEF = 1
 EQUIP = {
@@ -228,6 +255,8 @@ def find(board, piece):
         Y = 0
         while not (piece in board[Y]):
                 Y += 1
+                if Y >= len(board):
+                        return False
         return board[Y].index(piece), Y
 
 
@@ -260,9 +289,6 @@ def checkfor(board, sub):
         checklist = findall(board, sub[0][0])
         ret = []
         for x, y in checklist:
-                p = get(board, (x, y))
-                put(board, (x, y), "%")
-                put(board, (x, y), p)
                 try:
                         if bisequal(getsub(board, (x, y),
                                            (len(sub[0]), len(sub))), sub):
@@ -279,7 +305,9 @@ def step(board, position, direction, under=False, lvl=0):
         if (piece in ACT) and (nxt in ACT):
                 return collide(board, position, (x2, y2), LEVEL)
         if nxt in TANG:
-                return ""
+                return "bump"
+        if position not in UNDER[lvl] or not UNDER[lvl][position]:
+                UNDER[lvl][position] = [EMPTY]
         put(board, position, UNDER[lvl][position].pop())
         put(board, (x2, y2), piece, under=under, lvl=lvl)
         return ""
@@ -289,9 +317,6 @@ def collide(board, pos1, pos2, lvl):
         global SCORE, ENEMIES, HP
         data = ""
         p1, p2 = get(board, pos1), get(board, pos2)
-        if p2 == PLAYER != p1:
-                p1, p2 = p2, p1
-                pos1, pos2 = pos2, pos1
         if p1 == PLAYER and p2 in [DOOR, GOLD]:
                 if pos2 in UNDER:
                         put(board, pos2, UNDER[pos2], under=True, lvl=lvl)
@@ -304,6 +329,7 @@ def collide(board, pos1, pos2, lvl):
                 put(board, pos2, p1, under=True, lvl=lvl)
         if p1 == PLAYER and p2 in FIGHTABLE and (pos2, p2) in ENEMIES[lvl]:
                 enemy = ENEMIES[lvl][(pos2, p2)]
+                enemy['type'] = "agg"
                 roll = randint(0, 100)
                 if roll < 15:
                         data += "you miss the " + enemy['name']
@@ -320,12 +346,14 @@ def collide(board, pos1, pos2, lvl):
         if p1 in FIGHTABLE and (pos1, p1) in ENEMIES[lvl] and p2 == PLAYER:
                 enemy = ENEMIES[lvl][(pos1, p1)]
                 roll = randint(0, 100)
-                if roll > 15:
+                if roll < 15:
                         data += "the " + enemy['name'] + " misses you\n"
                 else:
                         data += "the " + enemy['name'] + " hits you\n"
                         dmg = max(enemy['ATK'] - DEF, 1)
                         HP -= dmg
+        if p1 in FIGHTABLE and (pos1, p1) in ENEMIES[lvl] and p2 != PLAYER:
+                return "bump"
         return data
 
 
@@ -356,6 +384,8 @@ def directto(pos1, pos2):
 
 
 def insight(board, position1, position2, dist=10):
+        if False in [position1, position2]:
+                return False
         if getdist(position1, position2) > dist:
                 return False
         x1, y1 = position2
@@ -577,27 +607,37 @@ def equip(item):
 
 def boardsturn(board, lvl):
         global ENEMIES
-        dead = []
-        for pos, ch in ENEMIES[lvl]:
+        s = ""
+        for pos, ch in ENEMIES[lvl].keys():
                 enemy = ENEMIES[lvl][(pos, ch)]
                 x, y = pos
                 if enemy["HP"] <= 0:
-                        dead.append((pos, ch))
+                        ENEMIES[lvl].pop((pos, ch))
                         if pos in UNDER[lvl]:
-                                put(board, pos, UNDER[lvl][pos].pop())
+                                put(board, pos, UNDER[lvl][pos].pop(),
+                                    under=True, lvl=lvl)
                         else:
                                 put(board, pos, EMPTY, under=True, lvl=lvl)
-                nbrs = [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
+                        s += enemy['name'] + " dies"
+                        continue
                 if enemy['type'] == "sleep":
                         pass
-                elif enemy['type'] == "agro" and insight(board, pos,
-                                                         find(board, PLAYER)):
-                        pass
+                elif enemy['type'] == "agg" and insight(board, pos,
+                                                        find(board, PLAYER)):
+                        pos2 = find(board, PLAYER)
+                        direc = directto(pos, pos2)
+                        S = step(board, pos, direc, under=True, lvl=lvl)
+                        print(S)
+                        if not S:
+                                ENEMIES[lvl].pop((pos, ch))
+                                ENEMIES[lvl][
+                                        ((x + direc[0], y + direc[1]), ch)
+                                ] = enemy
+                        else:
+                                s += S
                 if enemy['type'] == "hide":
                         pass
-                nbrs
-        for enemy in dead:
-                ENEMIES[lvl].pop(enemy)
+        return s
 
 
 def dig_dungeon(floors=15):
@@ -619,7 +659,7 @@ def dig_dungeon(floors=15):
 
         entry = find(LEVELS[-1], DWNSTR)
         LEVELS.append([" " * (entry[0] + len(END[0]))] * (entry[1] + len(END)))
-        insert(LEVELS[-1], END, (entry[0] - 2, entry[1] - 2))
+        insert(LEVELS[-1], END, (entry[0] - 3, entry[1] - 2))
 
 
 board = LEVELS[LEVEL]
@@ -646,7 +686,7 @@ else:
 
 data = "The Jeorney Begins"
 animate(getlit(board, [(find(board, PLAYER), 10)], LEVEL), .300, data=data)
-while True:
+while HP > 0:
         if LEVEL > len(LEVELS):
                 break
         cmds = raw_input(": ").split()[::-1]
@@ -663,26 +703,16 @@ while True:
                         data += " Armor: None\n"
                 cmd = cmds.pop()
                 if cmd in ["Q", "quit"]:
-                        if raw_input("Print dungeon? Nothing for no..."):
-                                for b in LEVELS:
-                                        print()
-                                        printb(b)
-                        quit()
+                        if raw_input("are you sure? you will die..."):
+                                if DEBUG and raw_input("Print dungeon?"):
+                                        for b in LEVELS:
+                                                print()
+                                                printb(b)
+                                HP = 0
 
                 if cmd in ["H", "help"]:
-                        data += """
-COMMANDS:
-. L: Left  . S: Stairs . Q: Quit
-. U: Up    . G: Get    . Un: check Under
-. R: Right . Dr: Drop  . Inv: check Inventory
-. D: Down  . Eq: Equip . H: Help (thats this)
+                        data += HELP
 
-SPRITES:
-. @: You   . >: Downward   . /: Weapon
-. #: Stone . <: Upward     . [: Armor
-. +: Wall      staircase   .  : Empty
-. =: Door  . *: Gold       . .: Floor
-"""
                 if cmd in ["L", "left"]:
                         data += step(board,
                                      find(board, PLAYER), (-1, 0),
@@ -708,8 +738,13 @@ SPRITES:
                                 data += "refrence by number\n"
                         for n, item in enumerate(INV):
                                 data += str(n) + ": " + item['name'] + "\n"
+
                 if cmd in ["stats"] and DEBUG:
                         data += "Atk: " + str(ATK) + "\nDef: " + str(DEF)
+
+                if cmd in ["???"] and DEBUG:
+                        data += str((UNDER[LEVEL],
+                                     ENEMIES[LEVEL], ITEMS[LEVEL]))
 
                 if cmd in ["Eq", "equip"]:
                         if cmds:
@@ -785,7 +820,60 @@ SPRITES:
                 animate(getlit(
                         board, [(find(board, PLAYER), 10)], LEVEL),
                         .150, data=data)
-                boardsturn(board, LEVEL)
+                data += boardsturn(board, LEVEL)
                 animate(getlit(
                         board, [(find(board, PLAYER), 10)], LEVEL),
                         .150, data=data)
+
+clear()
+print("You made it to level " + str(LEVEL))
+print("You got " + str(SCORE) + " gold")
+NAME = raw_input("Name?: ")
+if len(NAME) > 10:
+        NAME = NAME[0:10]
+if not NAME:
+        NAME = "You"
+myentry = " ".join([NAME, str(LEVEL), str(SCORE)])
+board = """   ### HALL OF FAME ###   ,
+   NAME    | FLOOR, SCORE ,
+-----------+--------------,
+           |              ,
+           |              ,
+           |              ,
+           |              ,
+           |              ,
+           |              ,
+           |              ,
+           |              ,
+           |              ,
+           |              ,""".splitlines()
+
+try:
+        with open("scoreboard.txt", "r") as SCOREBOARD:
+                scoreboard = SCOREBOARD.read().splitlines()
+except IOError:
+        scoreboard = []
+print(scoreboard)
+raw_input()
+with open("scoreboard.txt", "w") as SCOREBOARD:
+        ENTERED = False
+        for i, entry in enumerate(scoreboard):
+                name, lvl, score = entry.split()
+                if i > 10:
+                        break
+                if not ENTERED:
+                        if LEVEL >= int(lvl) and SCORE > int(score):
+                                SCOREBOARD.write(myentry + "\n")
+                                ENTERED = True
+                SCOREBOARD.write(entry + "\n")
+        if len(scoreboard) < 10 and not ENTERED:
+                SCOREBOARD.write(myentry)
+with open("scoreboard.txt", "r") as SCOREBOARD:
+        scoreboard = SCOREBOARD.read().splitlines()
+        for i, entry in enumerate(scoreboard):
+                name, lvl, score = entry.split()
+                print(name, lvl, score)
+                insert(board, [name], (0, i + 3))
+                insert(board, [lvl], (13, i + 3))
+                insert(board, [score], (20, i + 3))
+printb(board)
