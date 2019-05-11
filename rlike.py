@@ -662,9 +662,11 @@ def dig_dungeon(floors=15):
         insert(LEVELS[-1], END, (entry[0] - 3, entry[1] - 2))
 
 
-board = LEVELS[LEVEL]
-clear()
-floors = raw_input(colored("""Welcome to the Dungeon of LURD                   ,
+if __name__ == """__main__""":
+
+        board = LEVELS[LEVEL]
+        clear()
+        floors = raw_input(colored("""Welcome to the Dungeon of LURD                   ,
 COMMANDS:                                        ,
 . L: Left  . S: Stairs . Q: Quit                 ,
 . U: Up    . G: Get    . Un: check Under         ,
@@ -679,162 +681,162 @@ SPRITES:                                         ,
                                                  ,
 Time to build the dungeon.                       ,
 How many levels deep? (blank for 15): """, menu=True))
-if floors:
-        dig_dungeon(int(floors))
-else:
-        dig_dungeon()
+        if floors:
+                dig_dungeon(int(floors))
+        else:
+                dig_dungeon()
 
-data = "The Jeorney Begins"
-animate(getlit(board, [(find(board, PLAYER), 10)], LEVEL), .300, data=data)
-while HP > 0:
-        if LEVEL > len(LEVELS):
-                break
-        cmds = raw_input(": ").split()[::-1]
-        while cmds:
-                data = "LEVEL: " + str(LEVEL) + " GOLD: " + str(SCORE)
-                data += " \nHP: " + str(HP) + " Weapon: "
-                if EQUIP['weapn']:
-                        data += EQUIP["weapn"]['name']
-                else:
-                        data += "None"
-                if EQUIP['armor']:
-                        data += " Armor: " + EQUIP["armor"]["name"] + "\n"
-                else:
-                        data += " Armor: None\n"
-                cmd = cmds.pop()
-                if cmd in ["Q", "quit"]:
-                        if raw_input("are you sure? you will die..."):
-                                if DEBUG and raw_input("Print dungeon?"):
-                                        for b in LEVELS:
-                                                print()
-                                                printb(b)
-                                HP = 0
-
-                if cmd in ["H", "help"]:
-                        data += HELP
-
-                if cmd in ["L", "left"]:
-                        data += step(board,
-                                     find(board, PLAYER), (-1, 0),
-                                     under=True, lvl=LEVEL)
-                if cmd in ["U", "up"]:
-                        data += step(board,
-                                     find(board, PLAYER), (0, -1),
-                                     under=True, lvl=LEVEL)
-                if cmd in ["R", "right"]:
-                        data += step(board,
-                                     find(board, PLAYER), (1, 0),
-                                     under=True, lvl=LEVEL)
-                if cmd in ["D", "down"]:
-                        data += step(board,
-                                     find(board, PLAYER), (0, 1),
-                                     under=True, lvl=LEVEL)
-
-                if cmd in ["Un", "under"]:
-                        data += ", ".join(UNDER[LEVEL][find(board, PLAYER)])
-
-                if cmd in ["Inv", "inventory"]:
-                        if INV:
-                                data += "refrence by number\n"
-                        for n, item in enumerate(INV):
-                                data += str(n) + ": " + item['name'] + "\n"
-
-                if cmd in ["stats"] and DEBUG:
-                        data += "Atk: " + str(ATK) + "\nDef: " + str(DEF)
-
-                if cmd in ["???"] and DEBUG:
-                        data += str((UNDER[LEVEL],
-                                     ENEMIES[LEVEL], ITEMS[LEVEL]))
-
-                if cmd in ["Eq", "equip"]:
-                        if cmds:
-                                eq = cmds.pop()
+        data = "The Jeorney Begins"
+        animate(getlit(board, [(find(board, PLAYER), 10)], LEVEL), .300, data=data)
+        while HP > 0:
+                if LEVEL > len(LEVELS):
+                        break
+                cmds = raw_input(": ").split()[::-1]
+                while cmds:
+                        data = "LEVEL: " + str(LEVEL) + " GOLD: " + str(SCORE)
+                        data += " \nHP: " + str(HP) + " Weapon: "
+                        if EQUIP['weapn']:
+                                data += EQUIP["weapn"]['name']
                         else:
-                                eq = raw_input("Equipt what? : ")
-                        for n, item in enumerate(INV):
-                                if "stat" not in item:
-                                        data += "Thats"
-                                elif eq in [item['name'], str(n)]:
-                                        data += str(equip(item))
-                                break
+                                data += "None"
+                        if EQUIP['armor']:
+                                data += " Armor: " + EQUIP["armor"]["name"] + "\n"
                         else:
-                                data += "Nothing found under " + eq
+                                data += " Armor: None\n"
+                        cmd = cmds.pop()
+                        if cmd in ["Q", "quit"]:
+                                if raw_input("are you sure? you will die..."):
+                                        if DEBUG and raw_input("Print dungeon?"):
+                                                for b in LEVELS:
+                                                        print()
+                                                        printb(b)
+                                        HP = 0
 
-                if cmd in ["G", "get"]:
-                        for piece in UNDER[LEVEL][find(board, PLAYER)]:
-                                if (find(board, PLAYER), piece) in ITEMS[
-                                                LEVEL]:
-                                        UNDER[LEVEL][
-                                                find(board, PLAYER)
-                                        ].remove(piece)
-                                        INV.append(ITEMS[LEVEL][
-                                                (find(board, PLAYER), piece)
-                                        ])
-                                        data += "got " + INV[-1]['name']
+                        if cmd in ["H", "help"]:
+                                data += HELP
 
-                if cmd in ["W", "warp"] and DEBUG:
-                        put(board, find(board, PLAYER),
-                            UNDER[LEVEL][find(board, PLAYER)].pop(),
-                            under=True, lvl=LEVEL)
-                        put(board, find(board, DWNSTR), PLAYER,
-                            under=True, lvl=LEVEL)
+                        if cmd in ["L", "left"]:
+                                data += step(board,
+                                             find(board, PLAYER), (-1, 0),
+                                             under=True, lvl=LEVEL)
+                        if cmd in ["U", "up"]:
+                                data += step(board,
+                                             find(board, PLAYER), (0, -1),
+                                             under=True, lvl=LEVEL)
+                        if cmd in ["R", "right"]:
+                                data += step(board,
+                                             find(board, PLAYER), (1, 0),
+                                             under=True, lvl=LEVEL)
+                        if cmd in ["D", "down"]:
+                                data += step(board,
+                                             find(board, PLAYER), (0, 1),
+                                             under=True, lvl=LEVEL)
 
-                if cmd in ["S", "stairs"]:
-                        pos = find(board, PLAYER)
-                        if pos in UNDER[LEVEL]:
-                                if UPSTAIR in UNDER[LEVEL][pos]:
-                                        put(board, pos,
-                                            UNDER[LEVEL][pos].pop())
-                                        LEVEL -= 1
-                                        put(LEVELS[LEVEL], pos, PLAYER,
-                                            under=True, lvl=LEVEL)
-                                        if LEVEL < 0:
-                                                print("Farewell traveler")
-                                                quit()
-                                elif DWNSTR in UNDER[LEVEL][pos]:
-                                        put(board, pos,
-                                            UNDER[LEVEL][pos].pop())
-                                        LEVEL += 1
-                                        put(LEVELS[LEVEL], pos, PLAYER,
-                                            under=True, lvl=LEVEL)
+                        if cmd in ["Un", "under"]:
+                                data += ", ".join(UNDER[LEVEL][find(board, PLAYER)])
 
-                if cmd in ["Dr", "Drop"]:
-                        if cmds:
-                                dr = cmds.pop()
-                        else:
-                                dr = raw_input("Drop what? : ")
-                        for n, item in enumerate(INV):
-                                if dr in [item['name'], str(n)]:
-                                        INV.remove(item)
-                                        ITEMS[LEVEL][(
-                                                find(board, PLAYER),
-                                                item['char'])] = item
-                                        UNDER[LEVEL][
-                                                find(board, PLAYER)
-                                        ].append(item['char'])
-                                        data += "Dropped " + item['name']
+                        if cmd in ["Inv", "inventory"]:
+                                if INV:
+                                        data += "refrence by number\n"
+                                for n, item in enumerate(INV):
+                                        data += str(n) + ": " + item['name'] + "\n"
+
+                        if cmd in ["stats"] and DEBUG:
+                                data += "Atk: " + str(ATK) + "\nDef: " + str(DEF)
+
+                        if cmd in ["???"] and DEBUG:
+                                data += str((UNDER[LEVEL],
+                                             ENEMIES[LEVEL], ITEMS[LEVEL]))
+
+                        if cmd in ["Eq", "equip"]:
+                                if cmds:
+                                        eq = cmds.pop()
+                                else:
+                                        eq = raw_input("Equipt what? : ")
+                                for n, item in enumerate(INV):
+                                        if "stat" not in item:
+                                                data += "Thats"
+                                        elif eq in [item['name'], str(n)]:
+                                                data += str(equip(item))
                                         break
-                        else:
-                                data += "Nothing found under " + dr
-                board = LEVELS[LEVEL]
-                animate(getlit(
-                        board, [(find(board, PLAYER), 10)], LEVEL),
-                        .150, data=data)
-                data += boardsturn(board, LEVEL)
-                animate(getlit(
-                        board, [(find(board, PLAYER), 10)], LEVEL),
-                        .150, data=data)
+                                else:
+                                        data += "Nothing found under " + eq
 
-clear()
-print("You made it to level " + str(LEVEL))
-print("You got " + str(SCORE) + " gold")
-NAME = raw_input("Name?: ")
-if len(NAME) > 10:
-        NAME = NAME[0:10]
-if not NAME:
-        NAME = "You"
-myentry = " ".join([NAME, str(LEVEL), str(SCORE)])
-board = """   ### HALL OF FAME ###   ,
+                        if cmd in ["G", "get"]:
+                                for piece in UNDER[LEVEL][find(board, PLAYER)]:
+                                        if (find(board, PLAYER), piece) in ITEMS[
+                                                        LEVEL]:
+                                                UNDER[LEVEL][
+                                                        find(board, PLAYER)
+                                                ].remove(piece)
+                                                INV.append(ITEMS[LEVEL][
+                                                        (find(board, PLAYER), piece)
+                                                ])
+                                                data += "got " + INV[-1]['name']
+
+                        if cmd in ["W", "warp"] and DEBUG:
+                                put(board, find(board, PLAYER),
+                                    UNDER[LEVEL][find(board, PLAYER)].pop(),
+                                    under=True, lvl=LEVEL)
+                                put(board, find(board, DWNSTR), PLAYER,
+                                    under=True, lvl=LEVEL)
+
+                        if cmd in ["S", "stairs"]:
+                                pos = find(board, PLAYER)
+                                if pos in UNDER[LEVEL]:
+                                        if UPSTAIR in UNDER[LEVEL][pos]:
+                                                put(board, pos,
+                                                    UNDER[LEVEL][pos].pop())
+                                                LEVEL -= 1
+                                                put(LEVELS[LEVEL], pos, PLAYER,
+                                                    under=True, lvl=LEVEL)
+                                                if LEVEL < 0:
+                                                        print("Farewell traveler")
+                                                        quit()
+                                        elif DWNSTR in UNDER[LEVEL][pos]:
+                                                put(board, pos,
+                                                    UNDER[LEVEL][pos].pop())
+                                                LEVEL += 1
+                                                put(LEVELS[LEVEL], pos, PLAYER,
+                                                    under=True, lvl=LEVEL)
+
+                        if cmd in ["Dr", "Drop"]:
+                                if cmds:
+                                        dr = cmds.pop()
+                                else:
+                                        dr = raw_input("Drop what? : ")
+                                for n, item in enumerate(INV):
+                                        if dr in [item['name'], str(n)]:
+                                                INV.remove(item)
+                                                ITEMS[LEVEL][(
+                                                        find(board, PLAYER),
+                                                        item['char'])] = item
+                                                UNDER[LEVEL][
+                                                        find(board, PLAYER)
+                                                ].append(item['char'])
+                                                data += "Dropped " + item['name']
+                                                break
+                                else:
+                                        data += "Nothing found under " + dr
+                        board = LEVELS[LEVEL]
+                        animate(getlit(
+                                board, [(find(board, PLAYER), 10)], LEVEL),
+                                .150, data=data)
+                        data += boardsturn(board, LEVEL)
+                        animate(getlit(
+                                board, [(find(board, PLAYER), 10)], LEVEL),
+                                .150, data=data)
+
+        clear()
+        print("You made it to level " + str(LEVEL))
+        print("You got " + str(SCORE) + " gold")
+        NAME = raw_input("Name?: ")
+        if len(NAME) > 10:
+                NAME = NAME[0:10]
+        if not NAME:
+                NAME = "You"
+        myentry = " ".join([NAME, str(LEVEL), str(SCORE)])
+        board = """   ### HALL OF FAME ###   ,
    NAME    | FLOOR, SCORE ,
 -----------+--------------,
            |              ,
@@ -848,32 +850,29 @@ board = """   ### HALL OF FAME ###   ,
            |              ,
            |              ,""".splitlines()
 
-try:
+        try:
+                with open("scoreboard.txt", "r") as SCOREBOARD:
+                        scoreboard = SCOREBOARD.read().splitlines()
+        except IOError:
+                scoreboard = []
+        with open("scoreboard.txt", "w") as SCOREBOARD:
+                ENTERED = False
+                for i, entry in enumerate(scoreboard):
+                        name, lvl, score = entry.split()
+                        if i > 10:
+                                break
+                        if not ENTERED:
+                                if LEVEL >= int(lvl) and SCORE > int(score):
+                                        SCOREBOARD.write(myentry + "\n")
+                                        ENTERED = True
+                        SCOREBOARD.write(entry + "\n")
+                if len(scoreboard) < 10 and not ENTERED:
+                        SCOREBOARD.write(myentry)
         with open("scoreboard.txt", "r") as SCOREBOARD:
                 scoreboard = SCOREBOARD.read().splitlines()
-except IOError:
-        scoreboard = []
-print(scoreboard)
-raw_input()
-with open("scoreboard.txt", "w") as SCOREBOARD:
-        ENTERED = False
-        for i, entry in enumerate(scoreboard):
-                name, lvl, score = entry.split()
-                if i > 10:
-                        break
-                if not ENTERED:
-                        if LEVEL >= int(lvl) and SCORE > int(score):
-                                SCOREBOARD.write(myentry + "\n")
-                                ENTERED = True
-                SCOREBOARD.write(entry + "\n")
-        if len(scoreboard) < 10 and not ENTERED:
-                SCOREBOARD.write(myentry)
-with open("scoreboard.txt", "r") as SCOREBOARD:
-        scoreboard = SCOREBOARD.read().splitlines()
-        for i, entry in enumerate(scoreboard):
-                name, lvl, score = entry.split()
-                print(name, lvl, score)
-                insert(board, [name], (0, i + 3))
-                insert(board, [lvl], (13, i + 3))
-                insert(board, [score], (20, i + 3))
-printb(board)
+                for i, entry in enumerate(scoreboard):
+                        name, lvl, score = entry.split()
+                        insert(board, [name], (0, i + 3))
+                        insert(board, [lvl], (13, i + 3))
+                        insert(board, [score], (20, i + 3))
+        printb(board)
