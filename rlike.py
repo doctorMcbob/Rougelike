@@ -20,11 +20,11 @@ D = {"l": (-1, 0),
 ### ---- SPRITES ----
 PLAYER = "@"; DWNSTR = ">"; UPSTAIR = "<"; STONE = "#"
 WALL = "+"; DOOR = "="; EMPTY = " "; FLOOR = "."; DARK = "\\"
-GOLD = "*"; STAFF = "/"; PICKAXE = "{"; BOW = ")"
+GOLD = "*"; STAFF = "/"; PICKAXE = "{"
 BATTERY = "%"; ARMOR = "["
 # groups
-CONSUME = "bcdfghjklmnprstvwxyz" + BATTERY
-WEAP = STAFF + BOW
+CONSUME = "bcdfghjklmnprstvwxyz" + BATTERY + PICKAXE
+WEAP = STAFF 
 FIGHTABLE = "BCDFGHJKLMNPRSTVWXYZ"
 TANG = STONE + WALL + DOOR  # Tangible
 ACT = PLAYER + DOOR + FIGHTABLE + GOLD
@@ -63,6 +63,50 @@ EQUIP = {
     "weapn": None,
     "armor": None
 }
+# the RNG picks randomly from:
+# bbbcdddfffggghjklllmmnnppprstttvwwxyyyyz
+POTIONS = {
+    "bdf": "+ HP",
+    "gtl": "+ STR",
+    "mnp": "+ DEF",
+    "kwv": "- STR",
+    "cjk": "- DEF",
+    "rs": "PSN",
+    "hxz": "VIS",
+    "y": "WARP",
+}
+def applypotion(pot):
+    global ATK, DEF, HP, INLIGHT
+    ret = "It was a potion of "
+    fn = pot['fn']
+    if fn == "+ STR":
+        ATK += randint(1, 3)
+        return ret + "power!"
+    elif fn == "+ DEF":
+        DEF += randint(1, 3)
+        return ret + "fortitude!"
+    elif fn == "+ HP":
+        HP += randint(5, 25)
+        return ret + "healing!"
+    elif fn == "- STR":
+        ATK = max(1, ATK - randint(1, 3))
+        return ret + "weakness!"
+    elif fn == "- DEF":
+        DEF = max(1, DEF - randint(1, 3))
+        return ret + "flimsyness!"
+    elif fn == "PSN":
+        HP -= randint(0, 10)
+        return ret + "poison! Yowch!"
+    elif fn == "VIS":
+        for x in range(len(LEVELS[LEVEL][0])):
+            for y in range(len(LEVELS[LEVEL])):
+                INLIGHT[LEVEL].add((x, y))
+        return ret + "vision!"
+    elif fn == "WARP":
+        put(ACTLAYER[LEVEL], find(ACTLAYER[LEVEL], PLAYER), EMPTY)
+        put(ACTLAYER[LEVEL], find(LEVELS[LEVEL], DWNSTR), PLAYER)
+        return ret + "teleportation!"
+
 #some set up
 LEVELS.append("""###########
 #         #
@@ -85,7 +129,7 @@ END = """##########
 HELP = """
 COMMANDS:
 . l: Left  . s: Stairs      . q: Quit
-. u: Up    . i: Inventory
+. u: Up    . i: Inventory   . Consume(potions)
 . r: Right . e: Equip
 . d: Down  . h: Help (thats this)
 
@@ -164,13 +208,27 @@ def makename():
     if roll < 80: return choice(const) + choice(special) + choice(vowel) + choice(vowel) + choice(special) + choice(special)
     return choice(special) + choice(vowel) + choice(special) + choice(special)
 def makeitem(ch, lvl):
-    name = makename()
-    if ch == STAFF: name = "Sword of " + name
-    elif ch == ARMOR: name = "Suit of " + name + " Armor"
+    if ch == STAFF: name = "Sword of " + makename()
+    elif ch == ARMOR: name = "Suit of " + makename() + " Armor"
     return {
         "name": name,
         "stat": lvl + randint(-2, 10),
         "char": ch,
+    }
+def makepickaxe():
+    return {
+        "name": "Pickaxe",
+        "uses": 10,
+        "char": PICKAXE
+    }
+def makepotion(name=None):
+    if name is None: name = makename()
+    for key in POTIONS:
+        if name[0] in key: fn = POTIONS[key]
+    return {
+        "name": "A potion marked " + name,
+        "fn": fn,
+        "char": name[0],
     }
 def makeenemy(lvl):
     name = makename()
@@ -210,7 +268,7 @@ def collide(pos1, pos2, lvl): #pos1 is moving onto pos2
         data += "Got 10 gold\n"
         put(ACTLAYER[lvl], pos1, EMPTY)
         put(ACTLAYER[lvl], pos2, p1)
-    if p1 == PLAYER and p2 in [ARMOR, STAFF]:
+    if p1 == PLAYER and p2 in ARMOR + STAFF + CONSUME:
         item = ACTORS[lvl][pos2]
         data += "Got " + item["name"]
         INV.append(item)
@@ -396,7 +454,7 @@ def populate(board, lvl):
         pos = empties.pop(randint(0, len(empties)-1))
         put(ACTLAYER[lvl], pos, GOLD)
         animate(board, .001, layer2=ACTLAYER[lvl], debug=True)
-    # place items
+    # fill room
     items = []; roll = randint(0, 100)
     room = [x for x in allof(board, FLOOR)]
     for pos in room:
@@ -410,6 +468,20 @@ def populate(board, lvl):
         room.remove(pos)
         put(ACTLAYER[lvl], pos, item["char"])
         ACTORS[lvl][pos] = item
+    for pos in room:
+        if not randint(0, 5):
+            pot = makepotion()
+            put(ACTLAYER[lvl], pos, pot['char'])
+            ACTORS[lvl][pos] = pot
+    # potions
+    for pos in empties:
+        if get(ACTLAYER[lvl], pos) != EMPTY: 
+            empties.remove(pos)
+            continue
+        if not randint(0, 25):
+            pot = makepotion()
+            put(ACTLAYER[lvl], pos, pot['char'])
+            ACTORS[lvl][pos] = pot
     return board
 
 def dequip(item):
@@ -490,7 +562,7 @@ if __name__ == """__main__""": #Badly needs cleaning...
     floors = raw_input(colored("""Welcome to the Dungeon of LURD                   ,
 COMMANDS:                                        ,
 . l: Left  . s: Stairs      . q: Quit            ,
-. u: Up    . i: Inventory                        ,
+. u: Up    . i: Inventory   . c: Consume(potions),
 . r: Right . e: Equip                            ,
 . d: Down  . h: Help (thats this)                ,
                                                  ,
@@ -539,8 +611,16 @@ How many levels deep? (blank for 15): """))
                         if "stat" not in item: data += "thats not equipable"
                         else: data += str(equip(item))
                         break
-                else:
-                    data += "Nothing found under " + eq
+                else: data += "Nothing found under " + eq
+            if cmd in ["c", "consume"]:
+                if cmds: c = cmds.pop()
+                else: c = raw_input("consume what : ")
+                for n, item in enumerate(INV):
+                    if c in [item['name'], str(n)]:
+                        if "fn" not in item: data += "thats not consumable"
+                        else: data += str(applypotion(item))
+                        break
+                else: data += "Nothing found under " + c 
             if cmd in ["s", "stairs"]:
                 pos = find(ACTLAYER[LEVEL], PLAYER)
                 under = get(LEVELS[LEVEL], pos)
