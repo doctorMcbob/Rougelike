@@ -1,7 +1,6 @@
 #rlike.py redux
 """
-Re writing the whole thing
-no pep8 edition;lifes good
+am i really going to re write this whole thing again? yes, problably
 """
 from __future__ import print_function, unicode_literals
 import os
@@ -66,46 +65,15 @@ EQUIP = {
 # the RNG picks randomly from:
 # bbbcdddfffggghjklllmmnnppprstttvwwxyyyyz
 POTIONS = {
-    "bdf": "+ HP",
-    "gtl": "+ STR",
-    "mnp": "+ DEF",
-    "kwv": "- STR",
-    "cjk": "- DEF",
-    "rs": "PSN",
-    "hxz": "VIS",
+    "bf": "+ HP",
+    "gkl": "+ STR",
+    "mns": "+ DEF",
+    "twv": "- STR",
+    "jpr": "- DEF",
+    "d": "PSN",
+    "hxzc": "VIS",
     "y": "WARP",
 }
-def applypotion(pot):
-    global ATK, DEF, HP, INLIGHT
-    ret = "It was a potion of "
-    fn = pot['fn']
-    if fn == "+ STR":
-        ATK += randint(1, 3)
-        return ret + "power!"
-    elif fn == "+ DEF":
-        DEF += randint(1, 3)
-        return ret + "fortitude!"
-    elif fn == "+ HP":
-        HP += randint(5, 25)
-        return ret + "healing!"
-    elif fn == "- STR":
-        ATK = max(1, ATK - randint(1, 3))
-        return ret + "weakness!"
-    elif fn == "- DEF":
-        DEF = max(1, DEF - randint(1, 3))
-        return ret + "flimsyness!"
-    elif fn == "PSN":
-        HP -= randint(0, 10)
-        return ret + "poison! Yowch!"
-    elif fn == "VIS":
-        for x in range(len(LEVELS[LEVEL][0])):
-            for y in range(len(LEVELS[LEVEL])):
-                INLIGHT[LEVEL].add((x, y))
-        return ret + "vision!"
-    elif fn == "WARP":
-        put(ACTLAYER[LEVEL], find(ACTLAYER[LEVEL], PLAYER), EMPTY)
-        put(ACTLAYER[LEVEL], find(LEVELS[LEVEL], DWNSTR), PLAYER)
-        return ret + "teleportation!"
 
 #some set up
 LEVELS.append("""###########
@@ -498,7 +466,7 @@ def dequip(item):
         return "not equipted"
 
 def equip(item):   
-    global ATK, DEF
+    global ATK, DEF, INV
     if item not in INV:
         return "do not have " + item["name"]
     if item['char'] not in WEAP + ARMOR:
@@ -515,6 +483,40 @@ def equip(item):
         EQUIP["armor"] = item
         DEF += item["stat"]
     return "Equipted " + item["name"]
+
+def applypotion(pot):
+    global INV, ATK, DEF, HP, INLIGHT
+    if pot not in INV: return "do not have " + pot['name']
+    INV.remove(pot)
+    ret = "It was a potion of "
+    fn = pot['fn']
+    if fn == "+ STR":
+        ATK += randint(1, 3)
+        return ret + "power!"
+    elif fn == "+ DEF":
+        DEF += randint(1, 3)
+        return ret + "fortitude!"
+    elif fn == "+ HP":
+        HP += randint(5, 25)
+        return ret + "healing!"
+    elif fn == "- STR":
+        ATK = max(1, ATK - randint(1, 3))
+        return ret + "weakness!"
+    elif fn == "- DEF":
+        DEF = max(1, DEF - randint(1, 3))
+        return ret + "flimsyness!"
+    elif fn == "PSN":
+        HP -= randint(0, 10)
+        return ret + "poison! Yowch!"
+    elif fn == "VIS":
+        for x in range(len(LEVELS[LEVEL][0])):
+            for y in range(len(LEVELS[LEVEL])):
+                INLIGHT[LEVEL].add((x, y))
+        return ret + "vision!"
+    elif fn == "WARP":
+        put(ACTLAYER[LEVEL], find(ACTLAYER[LEVEL], PLAYER), EMPTY)
+        put(ACTLAYER[LEVEL], find(LEVELS[LEVEL], DWNSTR), PLAYER)
+        return ret + "teleportation!"
 
 def boardsturn(lvl):
     ret = ""
@@ -647,7 +649,7 @@ How many levels deep? (blank for 15): """))
         NAME = NAME[0:10]
     if not NAME:
         NAME = "You"
-    myentry = " ".join([NAME, str(LEVEL), str(SCORE)])
+    myentry = repr([NAME, str(LEVEL), str(SCORE)])
     board = """   ### HALL OF FAME ###   ,
    NAME    | FLOOR, SCORE ,
 -----------+--------------,
@@ -670,7 +672,7 @@ How many levels deep? (blank for 15): """))
     with open("scoreboard.txt", "w") as SCOREBOARD:
         ENTERED = False
         for i, entry in enumerate(scoreboard):
-            name, lvl, score = entry.split()
+            name, lvl, score = eval(entry)
             if i > 10:
                 break
             if not ENTERED:
@@ -683,7 +685,7 @@ How many levels deep? (blank for 15): """))
     with open("scoreboard.txt", "r") as SCOREBOARD:
         scoreboard = SCOREBOARD.read().splitlines()
         for i, entry in enumerate(scoreboard):
-            name, lvl, score = entry.split()
+            name, lvl, score = eval(entry)
             insert(board, [name], (0, i + 3))
             insert(board, [lvl], (13, i + 3))
             insert(board, [score], (20, i + 3))

@@ -1,4 +1,1 @@
-You 5 430
-Felisha 5 370
-Biggy 5 320
-Wes 3 240
+['wes', '4', '350']
