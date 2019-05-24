@@ -41,6 +41,7 @@ COLORS = {
     ARMOR: "\033[1;45;96m",
     GOLD: "\033[1;33;35m",
     "ENEMY": "\033[1;45;91m",
+    "CONSUME": "\033[1;45;92m",
 
     DARK: "\033[0m",
     "\n": "\033[0m",
@@ -113,7 +114,8 @@ def clear(): os.system("clear || cls")
 def colored(ch): 
     if ch == DARK: return EMPTY + COLORS['footer']
     elif ch in COLORS: return COLORS[ch] + ch + COLORS['footer']
-    elif ch in FIGHTABLE: return COLORS["ENEMY"] + ch + COLORS['footer'] 
+    elif ch in FIGHTABLE: return COLORS["ENEMY"] + ch + COLORS['footer']
+    elif ch in CONSUME: return COLORS["CONSUME"] + ch + COLORS['footer'] 
     else: return COLORS[EMPTY] + ch + COLORS['footer']
 def printb(b, layer2=None):
     s = ""
@@ -491,22 +493,22 @@ def applypotion(pot):
     ret = "It was a potion of "
     fn = pot['fn']
     if fn == "+ STR":
-        ATK += randint(1, 3)
+        ATK += randint(1, 2)
         return ret + "power!"
     elif fn == "+ DEF":
-        DEF += randint(1, 3)
+        DEF += randint(1, 2)
         return ret + "fortitude!"
     elif fn == "+ HP":
-        HP += randint(5, 25)
+        HP += randint(5, 15)
         return ret + "healing!"
     elif fn == "- STR":
-        ATK = max(1, ATK - randint(1, 3))
+        ATK = max(1, ATK - randint(1, 2))
         return ret + "weakness!"
     elif fn == "- DEF":
-        DEF = max(1, DEF - randint(1, 3))
+        DEF = max(1, DEF - randint(1, 2))
         return ret + "flimsyness!"
     elif fn == "PSN":
-        HP -= randint(0, 10)
+        HP -= randint(5, 15)
         return ret + "poison! Yowch!"
     elif fn == "VIS":
         for x in range(len(LEVELS[LEVEL][0])):
