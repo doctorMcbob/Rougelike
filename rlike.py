@@ -57,8 +57,8 @@ LEVEL = 0
 SCORE = 0
 INV = []
 HP = 50
-ATK = 1
-DEF = 1
+ATK = 5
+DEF = 5
 EQUIP = {
     "weapn": None,
     "armor": None
@@ -98,14 +98,14 @@ END = """##########
 HELP = """
 COMMANDS:
 . l: Left  . s: Stairs      . q: Quit
-. u: Up    . i: Inventory   . Consume(potions)
-. r: Right . e: Equip
+. u: Up    . i: Inventory   . c: Consume(potions)
+. r: Right . e: Equip       . p: Pickaxe
 . d: Down  . h: Help (thats this)
 
 SPRITES:
-@: You   . >: Downward   . /: Weapon
+. @: You   . >: Downward   . /: Weapon
 . #: Stone . <: Upward     . [: Armor
-. +: Wall      staircase   .  : Empty
+. +: Wall  . {: Pickaxe    .  : Empty
 . =: Door  . *: Gold       . .: Floor
 
 """ # thanks pal
@@ -188,7 +188,7 @@ def makeitem(ch, lvl):
 def makepickaxe():
     return {
         "name": "Pickaxe",
-        "uses": 10,
+        "uses": randint(2, 10),
         "char": PICKAXE
     }
 def makepotion(name=None):
@@ -205,9 +205,9 @@ def makeenemy(lvl):
     return {
         "name": name,
         "state": choice(["agg", "hide", "sleep"]),
-        "HP": max(2, lvl + randint(-5, 10)),
-        "ATK": max(2, lvl + randint(-5, 5)),
-        "DEF": max(2, lvl + randint(-5, 5)),
+        "HP": max(randint(lvl, lvl + 5), randint(lvl + 10, lvl + 20)),
+        "ATK": max(randint(max(1, lvl), lvl + 3), randint(lvl + 4, lvl + 6)),
+        "DEF": max(randint(max(1, lvl), lvl + 3), randint(lvl + 4, lvl + 6)),
         "char": name[0].upper()
     }
 
@@ -215,12 +215,13 @@ def makeenemy(lvl):
 def step(pos, direction, lvl):
     global LEVELS, ACTLAYER
     x2, y2 = pos[0] + direction[0], pos[1] + direction[1]
+    if 0 > x2 or x2 >= len(LEVELS[lvl][0]) or 0 > y2 or y2 >= len(LEVELS[lvl]): return "" 
     piece = get(ACTLAYER[lvl], pos)
     nxt = get(ACTLAYER[lvl], (x2, y2))
     floor = get(LEVELS[lvl], (x2, y2))
     if floor in TANG: return "Bump"
     if nxt != EMPTY:
-        return collide(pos, (x2, y2), LEVEL)
+        return collide(pos, (x2, y2), lvl)
     put(ACTLAYER[lvl], pos, EMPTY)
     put(ACTLAYER[lvl], (x2, y2), piece)
     if piece != PLAYER:
@@ -288,35 +289,35 @@ def directto(pos1, pos2):
             if (y1 - y2) % slope: return (0, 1) if (y1 - y2) < 0 else (0, -1)
             else: return (1, 0) if (x1 - x2) < 0 else (-1, 0)
 
-def insight(board, position1, position2, dist=10):
+def insight(lvl, position1, position2, dist=10):
     if False in [position1, position2]: return False
     if getdist(position1, position2) > dist: return False
     x1, y1 = position2; x2, y2 = position1
     flag = False
     while (x1, y1) != (x2, y2):
         d = directto((x1, y1), (x2, y2))
-        if d[0] and (get(board, (x1 + d[0], y1)) in TANG or get(ACTLAYER[LEVEL], (x1 + d[0], y1)) in TANG):
+        if d[0] and (get(LEVELS[lvl], (x1 + d[0], y1)) in TANG or get(ACTLAYER[lvl], (x1 + d[0], y1)) in TANG):
             d = (0, 1) if (y1 - y2) < 0 else (0, -1)
             if not flag: flag = True
             else: return False
-        elif d[1] and (get(board, (x1, y1 + d[1])) in TANG or get(ACTLAYER[LEVEL], (x1, y1 + d[1])) in TANG):
+        elif d[1] and (get(LEVELS[lvl], (x1, y1 + d[1])) in TANG or get(ACTLAYER[lvl], (x1, y1 + d[1])) in TANG):
                 d = (1, 0) if (x1 - x2) < 0 else (-1, 0)
                 if not flag: flag = True
                 else: return False
         x1, y1 = x1 + d[0], y1 + d[1]
-        if (get(board, (x1, y1)) in TANG or get(ACTLAYER[LEVEL], (x1, y1)) in TANG) and (x1, y1) != (x2, y2):
+        if (get(LEVELS[lvl], (x1, y1)) in TANG or get(ACTLAYER[lvl], (x1, y1)) in TANG) and (x1, y1) != (x2, y2):
             return False
     return True
 
-def getlit(board, lights, lvl):  # 420 blaze it
+def getlit(lights, lvl):  # 420 blaze it
     global INLIGHT
     s = ""
-    for y, line in enumerate(board):
+    for y, line in enumerate(LEVELS[lvl]):
         for x, piece in enumerate(line):
             if (x, y) not in INLIGHT[lvl]:
-                    for light, dis in lights:
-                        if insight(board, light, (x, y), dis):
-                            INLIGHT[lvl].add((x, y))
+                for light, dis in lights:
+                    if insight(lvl, light, (x, y), dis):
+                        INLIGHT[lvl].add((x, y))
             if (x, y) in INLIGHT[lvl]: s += piece
             else: s += DARK
         s += "\n"
@@ -401,8 +402,8 @@ def refine(board, layer2, lvl):
         try:
             if get(b, (stone[0] + 1, stone[1])) == get(b, (stone[0] - 1, stone[1])) == EMPTY:
                 put(b, stone, "+")
-                if get(b, (stone[0], stone[1] + 1)) == get(b, (stone[0], stone[1] - 1)) == EMPTY:
-                    put(b, stone, "+")
+            if get(b, (stone[0], stone[1] + 1)) == get(b, (stone[0], stone[1] - 1)) == EMPTY:
+                put(b, stone, "+")
         except IndexError: continue
     insert(board, b, (1, 1))
     return board
@@ -429,8 +430,8 @@ def populate(board, lvl):
     room = [x for x in allof(board, FLOOR)]
     for pos in room:
         if get(ACTLAYER[lvl], pos) != EMPTY: room.remove(pos)
-    if roll > 49: items.append(makeitem(STAFF, lvl))
-    if roll < 60: items.append(makeitem(ARMOR, lvl))
+    if roll > 45: items.append(makeitem(STAFF, lvl))
+    if roll < 55: items.append(makeitem(ARMOR, lvl))
     if 50 <= roll <= 51: items = []
     for item in items:
         if not room: break
@@ -448,10 +449,14 @@ def populate(board, lvl):
         if get(ACTLAYER[lvl], pos) != EMPTY: 
             empties.remove(pos)
             continue
-        if not randint(0, 25):
+        if not randint(0, 50):
             pot = makepotion()
             put(ACTLAYER[lvl], pos, pot['char'])
             ACTORS[lvl][pos] = pot
+        elif not randint(0, 250):
+            axe = makepickaxe()
+            put(ACTLAYER[lvl], pos, axe['char'])
+            ACTORS[lvl][pos] = axe
     return board
 
 def dequip(item):
@@ -462,7 +467,7 @@ def dequip(item):
         ATK -= item['stat']
     elif EQUIP["armor"] is item:
         INV.append(item)
-        EQUIP["weapn"] = None
+        EQUIP["armor"] = None
         DEF -= item['stat']
     else:
         return "not equipted"
@@ -528,14 +533,21 @@ def boardsturn(lvl):
         if "state" in actor:
             if actor['HP'] <= 0:
                 ACTORS[lvl].pop(pos)
-                put(ACTLAYER[LEVEL], pos, EMPTY)
+                put(ACTLAYER[lvl], pos, EMPTY)
                 ret += "The "+actor["name"]+" dies\n"
                 continue
             if actor["state"] == "sleep": pass
-            elif actor['state'] == "agg" and pos in INLIGHT[LEVEL]:
+            elif actor['state'] == "agg" and pos in INLIGHT[lvl]:
                 ret += step(pos, directto(pos, find(ACTLAYER[lvl], PLAYER)), lvl)
             elif actor['state'] == 'hide': pass
     return ret
+
+def get_stats(): #for the sake of gamemode.py
+    return {
+        "HP": HP, "ATK": ATK, "DEF": DEF, "GOLD": SCORE,
+        "Weapon": EQUIP["weapn"], "Armor": EQUIP["armor"]
+    }
+def get_inlight(): return INLIGHT
 
 def dig_dungeon(floors=15):
     global ACTLAYER, INLIGHT, ACTORS, LEVELS, END
@@ -544,6 +556,10 @@ def dig_dungeon(floors=15):
         ACTORS.append({})
     for x in range(floors + 1):
         INLIGHT.append(set())
+
+    axe = makepickaxe()
+    ACTORS[LEVEL][(5, 2)] = axe
+    put(ACTLAYER[LEVEL], (5, 2), axe['char']) 
     while floors:
         animate(["Digging Dungeon...", "floor " + str(LEVEL)], 0)
         floors -= 1
@@ -560,6 +576,53 @@ def dig_dungeon(floors=15):
     insert(LEVELS[-1], END, (entry[0] - 3, entry[1] - 2))
     ACTLAYER.append([" " * len(LEVELS[-1][0])] * len(LEVELS[-1]))
 
+def update_scoreboard(NAME):
+    global LEVEL
+    if len(NAME) > 10:
+        NAME = NAME[0:10]
+    if not NAME:
+        NAME = "You"
+    myentry = repr([NAME, str(LEVEL), str(SCORE)])
+    board = """   ### HALL OF FAME ###   ,
+   NAME    | FLOOR, SCORE ,
+-----------+--------------,
+           |              ,
+           |              ,
+           |              ,
+           |              ,
+           |              ,
+           |              ,
+           |              ,
+           |              ,
+           |              ,
+           |              ,""".splitlines()
+    try:
+        with open("scoreboard.txt", "r") as SCOREBOARD:
+            scoreboard = SCOREBOARD.read().splitlines()
+    except IOError:
+        scoreboard = []
+    with open("scoreboard.txt", "w") as SCOREBOARD:
+        ENTERED = False
+        for i, entry in enumerate(scoreboard):
+            name, lvl, score = eval(entry)
+            if i > 10:
+                break
+            if not ENTERED:
+                if LEVEL > int(lvl) or (LEVEL == int(lvl) and SCORE > int(score)):
+                    SCOREBOARD.write(myentry + "\n")
+                    ENTERED = True
+                SCOREBOARD.write(entry + "\n")
+        if len(scoreboard) < 10 and not ENTERED:
+            SCOREBOARD.write(myentry)
+    with open("scoreboard.txt", "r") as SCOREBOARD:
+        scoreboard = SCOREBOARD.read().splitlines()
+        for i, entry in enumerate(scoreboard):
+            name, lvl, score = eval(entry)
+            insert(board, [name], (0, i + 3))
+            insert(board, [lvl], (13, i + 3))
+            insert(board, [score], (20, i + 3))
+    return board
+
 if __name__ == """__main__""": #Badly needs cleaning...
     board = LEVELS[LEVEL]
     clear()
@@ -567,13 +630,13 @@ if __name__ == """__main__""": #Badly needs cleaning...
 COMMANDS:                                        ,
 . l: Left  . s: Stairs      . q: Quit            ,
 . u: Up    . i: Inventory   . c: Consume(potions),
-. r: Right . e: Equip                            ,
+. r: Right . e: Equip       . p: Pickaxe         ,
 . d: Down  . h: Help (thats this)                ,
                                                  ,
 SPRITES:                                         ,
 . @: You   . >: Downward   . /: Weapon           ,
 . #: Stone . <: Upward     . [: Armor            ,
-. +: Wall      staircase   .  : Empty            ,
+. +: Wall  . {: Pickaxe    .  : Empty            ,
 . =: Door  . *: Gold       . .: Floor            ,
                                                  ,
 Time to build the dungeon.                       ,
@@ -583,7 +646,7 @@ How many levels deep? (blank for 15): """))
     else:
         dig_dungeon()
     data = "The Jeorney Begins"
-    animate(getlit(board, [(find(ACTLAYER[LEVEL], PLAYER), 10)], LEVEL), .300, layer2=ACTLAYER[LEVEL], data=data)
+    animate(getlit([(find(ACTLAYER[LEVEL], PLAYER), 10)], LEVEL), .300, layer2=ACTLAYER[LEVEL], data=data)
     while HP > 0:
         if LEVEL > len(LEVELS): break
         cmds = raw_input(": ").split()[::-1]
@@ -615,7 +678,7 @@ How many levels deep? (blank for 15): """))
                         if "stat" not in item: data += "thats not equipable"
                         else: data += str(equip(item))
                         break
-                else: data += "Nothing found under " + eq
+                else: data += "Nothing found under " + eq 
             if cmd in ["c", "consume"]:
                 if cmds: c = cmds.pop()
                 else: c = raw_input("consume what : ")
@@ -624,7 +687,29 @@ How many levels deep? (blank for 15): """))
                         if "fn" not in item: data += "thats not consumable"
                         else: data += str(applypotion(item))
                         break
-                else: data += "Nothing found under " + c 
+                else: data += "Nothing found under " + c
+            if cmd in ["p", "pickaxe"]:
+                for item in INV:
+                    if item['name'] == "Pickaxe":
+                        axe = item
+                        break
+                else:
+                    data += "No  pickaxe found\n"
+                if cmds: d = cmds.pop()
+                else: d = raw_input("What direction? :")
+                if d in D:
+                    pos = find(ACTLAYER[LEVEL], PLAYER)
+                    delt = (pos[0] + D[d][0], pos[1] + D[d][1])
+                    item = get(LEVELS[LEVEL], delt)
+                    if item == WALL:
+                        put(LEVELS[LEVEL], delt, EMPTY)
+                    if item == STONE:
+                        put(LEVELS[LEVEL], delt, WALL)
+                    if item != EMPTY:
+                        if axe['uses']: axe['uses'] -= 1
+                        else:
+                            if randint(0, 1): INV.remove(axe)
+                            data += "The pickaxe broke" 
             if cmd in ["s", "stairs"]:
                 pos = find(ACTLAYER[LEVEL], PLAYER)
                 under = get(LEVELS[LEVEL], pos)
@@ -637,9 +722,9 @@ How many levels deep? (blank for 15): """))
                 elif under == DWNSTR:
                     LEVEL += 1
                     put(ACTLAYER[LEVEL], pos, PLAYER)
-            animate(getlit(LEVELS[LEVEL], [(find(ACTLAYER[LEVEL], PLAYER), 10)],  LEVEL), .15, layer2=ACTLAYER[LEVEL], data=data)
+            animate(getlit([(find(ACTLAYER[LEVEL], PLAYER), 10)],  LEVEL), .15, layer2=ACTLAYER[LEVEL], data=data)
             data += str(boardsturn(LEVEL))
-            animate(getlit(LEVELS[LEVEL], [(find(ACTLAYER[LEVEL], PLAYER), 10)], LEVEL), .15, layer2=ACTLAYER[LEVEL], data=data)
+            animate(getlit([(find(ACTLAYER[LEVEL], PLAYER), 10)], LEVEL), .15, layer2=ACTLAYER[LEVEL], data=data)
 
     clear()
     print("You made it to level " + str(LEVEL))
@@ -647,48 +732,4 @@ How many levels deep? (blank for 15): """))
     sleep(2)
     NAME = raw_input("Name?: ")
     clear()
-    if len(NAME) > 10:
-        NAME = NAME[0:10]
-    if not NAME:
-        NAME = "You"
-    myentry = repr([NAME, str(LEVEL), str(SCORE)])
-    board = """   ### HALL OF FAME ###   ,
-   NAME    | FLOOR, SCORE ,
------------+--------------,
-           |              ,
-           |              ,
-           |              ,
-           |              ,
-           |              ,
-           |              ,
-           |              ,
-           |              ,
-           |              ,
-           |              ,""".splitlines()
-
-    try:
-        with open("scoreboard.txt", "r") as SCOREBOARD:
-            scoreboard = SCOREBOARD.read().splitlines()
-    except IOError:
-        scoreboard = []
-    with open("scoreboard.txt", "w") as SCOREBOARD:
-        ENTERED = False
-        for i, entry in enumerate(scoreboard):
-            name, lvl, score = eval(entry)
-            if i > 10:
-                break
-            if not ENTERED:
-                if LEVEL > int(lvl) or (LEVEL == int(lvl) and SCORE > int(score)):
-                    SCOREBOARD.write(myentry + "\n")
-                    ENTERED = True
-                SCOREBOARD.write(entry + "\n")
-        if len(scoreboard) < 10 and not ENTERED:
-            SCOREBOARD.write(myentry)
-    with open("scoreboard.txt", "r") as SCOREBOARD:
-        scoreboard = SCOREBOARD.read().splitlines()
-        for i, entry in enumerate(scoreboard):
-            name, lvl, score = eval(entry)
-            insert(board, [name], (0, i + 3))
-            insert(board, [lvl], (13, i + 3))
-            insert(board, [score], (20, i + 3))
-    printb(board)
+    printb(update_scoreboard(NAME))
