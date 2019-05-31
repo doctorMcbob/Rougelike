@@ -1,7 +1,10 @@
+from __future__ import print_function, unicode_literals
 import os
 import pygame
 from pygame.locals import *
+import rlike
 from rlike import *
+import pdb
 PW = 32
 WIDTH, HIGHT = (640, 480)
 # tokens
@@ -30,22 +33,25 @@ SCREEN = pygame.display.set_mode((WIDTH, HIGHT))
 LOG = pygame.Surface((WIDTH, HIGHT))
 LOG.fill((200, 200, 200))
 LOGFONT = pygame.font.SysFont("Ubuntu", PW/2)
-COLORS = {
-    PLAYER: (230, 230, 0),
-    DWNSTR: (128, 128, 0),
-    UPSTAIR: (128, 128, 0),
-    WALL: (102, 51, 0),
-    STONE: (77, 0, 77),
-    DOOR: (204, 122, 0),
-    EMPTY: (204, 0, 204),
-    FLOOR: (255, 179, 255),
-    STAFF: (0, 204, 204),
-    ARMOR: (0, 204, 204),
-    GOLD: (255, 255, 77),
-    FIGHTABLE: (255, 0, 0),
-    GETTABLE: (0, 255, 0),
-    DARK: (0, 0, 0),
+SPRITES = {
+    PLAYER: pygame.image.load("bin/player.png").convert(),
+    DWNSTR: pygame.image.load("bin/downstairs.png").convert(),
+    UPSTAIR: pygame.image.load("bin/upstairs.png").convert(),
+    WALL: pygame.image.load("bin/wall.png").convert(),
+    STONE: pygame.image.load("bin/stone.png").convert(),
+    DOOR: pygame.image.load("bin/door.png").convert(),
+    EMPTY: pygame.image.load("bin/empty.png").convert(),
+    FLOOR: pygame.image.load("bin/floor.png").convert(),
+    STAFF: pygame.image.load("bin/sword.png").convert(),
+    ARMOR: pygame.image.load("bin/armor.png").convert(),
+    GOLD: pygame.image.load("bin/gold.png").convert(),
+    FIGHTABLE: pygame.image.load("bin/enemy.png").convert(),
+    PICKAXE: pygame.image.load("bin/pickaxe.png").convert(),
+    GETTABLE: pygame.image.load("bin/potion.png").convert(),
+    DARK: pygame.image.load("bin/dark.png").convert(),
 }
+for key in SPRITES.keys():
+    SPRITES[key].set_colorkey((255, 0, 220))
 for piece in FIGHTABLE: COLORS[piece] = (255, 0, 0)
 for piece in GETTABLE: COLORS[piece] = (0, 255, 0)
 def neg(col): return ((col[0] + 127) % 255, (col[1] + 127) % 255, (col[2] + 127) % 255)
@@ -70,17 +76,21 @@ def get_inputs(btns=BTNS):
 
 def draw(destination, piece, position, PW=PW):
     x, y = position
-    if piece not in COLORS: COLORS[piece] =  COLORS[EMPTY]
-    pygame.draw.rect(destination, COLORS[piece], pygame.Rect((x * PW, y * PW), (PW, PW)))
-    destination.blit(FONT.render(piece, 0, neg(COLORS[piece])), (x * PW, y * PW))
+    if piece not in SPRITES:
+        for key in SPRITES.keys():
+            if piece in key:
+                piece = key
+                break
+    destination.blit(SPRITES[piece], (x * PW, y * PW))
 
 def get_dungeon():
     dungeon = pygame.Surface((len(LEVELS[LEVEL][0]) * PW, len(LEVELS[LEVEL]) * PW))
     for y, line in enumerate(getlit([(find(ACTLAYER[LEVEL], PLAYER), 10)], LEVEL)):
         for x, piece in enumerate(line):
-            act = get(ACTLAYER[LEVEL], (x, y))
-            if act != EMPTY and (x, y) in get_inlight()[LEVEL]: piece = act
             draw(dungeon, piece, (x, y))
+            act = get(ACTLAYER[LEVEL], (x, y))
+            if act != EMPTY and (x, y) in get_inlight()[LEVEL]: 
+                draw(dungeon, act, (x, y))
     return dungeon
 
 def update_log(new):
@@ -88,6 +98,7 @@ def update_log(new):
     if not new: return
     log = pygame.Surface((WIDTH, HIGHT))
     log.fill((200, 200, 200))
+
     log.blit(LOG, (0, (PW/2) * len(new.splitlines())))
     for i, line in enumerate(new.splitlines()):
         log.blit(LOGFONT.render(line, 0, (0, 0, 0)), (0, PW/2 * i))
@@ -131,7 +142,7 @@ def get_stats_page(enemy=None):
     
     return stats_page
 
-inputs = []; log = "here we go"
+inputs = []; log = "The Journey Begins"
 update_log(log)
 while get_stats()["HP"] > 0:
     dungeon = get_dungeon()
@@ -146,12 +157,15 @@ while get_stats()["HP"] > 0:
             under = get(LEVELS[LEVEL], pos)
             if under == UPSTAIR:
                 put(ACTLAYER[LEVEL], pos, EMPTY)
-                LEVEL -= 1
+                rlike.LEVEL -= 1
+                LEVEL = rlike.LEVEL
                 if LEVEL < 0:
                     break
             elif under == DWNSTR:
-                LEVEL += 1
+                rlike.LEVEL += 1
+                LEVEL = rlike.LEVEL
                 put(ACTLAYER[LEVEL], pos, PLAYER)
+            log += "Floor " + str(LEVEL) + "..."
         if cmd == H:
             update_log(HELP+"\n===================")
             SCREEN.blit(LOG, (0, 10))
@@ -194,18 +208,19 @@ while get_stats()["HP"] > 0:
                     if randint(0, 2) == 0:
                         INV.remove(axe)
                         log += "The pickaxe broke" 
+        if cmd == Q: pdb.set_trace()
         log += boardsturn(LEVEL)
         update_log(log)
     _x, _y = find(ACTLAYER[LEVEL], PLAYER)
     SCREEN.fill((55, 55, 55))
     SCREEN.blit(dungeon, (WIDTH/2 - (_x*PW),HIGHT/3 - (_y*PW)))
-    SCREEN.blit(LOG, (0, (HIGHT/3)*2))
+    SCREEN.blit(LOG, (0, (HIGHT/4)*3))
     SCREEN.blit(get_stats_page(), (WIDTH - PW * 5, (HIGHT/3)*2))
     pygame.display.update()
 
 clear()
 print("You made it to level " + str(LEVEL))
-print("You got " + str(SCORE) + " gold")
+print("You got " + str(get_stats()["GOLD"]) + " gold")
 NAME = raw_input("Name?: ")
 clear()
-printb(update_scoreboard(NAME))
+update_scoreboard(NAME, LEVEL)

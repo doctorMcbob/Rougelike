@@ -219,7 +219,7 @@ def step(pos, direction, lvl):
     piece = get(ACTLAYER[lvl], pos)
     nxt = get(ACTLAYER[lvl], (x2, y2))
     floor = get(LEVELS[lvl], (x2, y2))
-    if floor in TANG: return "Bump"
+    if floor in TANG: return ""
     if nxt != EMPTY:
         return collide(pos, (x2, y2), lvl)
     put(ACTLAYER[lvl], pos, EMPTY)
@@ -270,8 +270,6 @@ def collide(pos1, pos2, lvl): #pos1 is moving onto pos2
            data += "The " + enemy['name'] + " hits you\n"
            dmg = max(enemy['ATK'] - DEF, 1)
            HP -= dmg
-    if p1 in FIGHTABLE and p2 != PLAYER:
-        data += "Bump\n"
     return data
 
 def directto(pos1, pos2):
@@ -492,7 +490,7 @@ def equip(item):
     return "Equipted " + item["name"]
 
 def applypotion(pot):
-    global INV, ATK, DEF, HP, INLIGHT
+    global INV, ATK, DEF, HP, INLIGHT, LEVEL
     if pot not in INV: return "do not have " + pot['name']
     INV.remove(pot)
     ret = "It was a potion of "
@@ -576,13 +574,12 @@ def dig_dungeon(floors=15):
     insert(LEVELS[-1], END, (entry[0] - 3, entry[1] - 2))
     ACTLAYER.append([" " * len(LEVELS[-1][0])] * len(LEVELS[-1]))
 
-def update_scoreboard(NAME):
-    global LEVEL
+def update_scoreboard(NAME, lvl):
     if len(NAME) > 10:
         NAME = NAME[0:10]
     if not NAME:
         NAME = "You"
-    myentry = repr([NAME, str(LEVEL), str(SCORE)])
+    myentry = repr([NAME, str(lvl), str(SCORE)])
     board = """   ### HALL OF FAME ###   ,
    NAME    | FLOOR, SCORE ,
 -----------+--------------,
@@ -621,7 +618,8 @@ def update_scoreboard(NAME):
             insert(board, [name], (0, i + 3))
             insert(board, [lvl], (13, i + 3))
             insert(board, [score], (20, i + 3))
-    return board
+    for line in board:
+        print(line)
 
 if __name__ == """__main__""": #Badly needs cleaning...
     board = LEVELS[LEVEL]
@@ -732,4 +730,4 @@ How many levels deep? (blank for 15): """))
     sleep(2)
     NAME = raw_input("Name?: ")
     clear()
-    printb(update_scoreboard(NAME))
+    update_scoreboard(NAME, LEVEL)
