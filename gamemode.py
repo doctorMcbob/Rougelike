@@ -3,8 +3,8 @@ import os
 import pygame
 from pygame.locals import *
 from time import sleep
-import rlike
-from rlike import *
+import LURD
+from LURD import *
 import pdb
 PW = 32
 WIDTH, HIGHT = (640, 480)
@@ -160,7 +160,7 @@ def throw(pos, item, direction):
     x, y = pos
     hold = get(ACTLAYER[LEVEL], pos)
     put(ACTLAYER[LEVEL], pos, item["char"])
-    rlike.ACTORS[LEVEL][pos] = item
+    LURD.ACTORS[LEVEL][pos] = item
     ret = step((x, y), d, LEVEL)
     put(ACTLAYER[LEVEL], pos, hold)
     while not ret:
@@ -178,7 +178,6 @@ def throw(pos, item, direction):
         ret = step((x, y), d, LEVEL)
     return ret
 
-
 inputs = []; log = "The Journey Begins"
 update_log(log)
 while get_stats()["HP"] > 0:
@@ -194,13 +193,13 @@ while get_stats()["HP"] > 0:
             under = get(LEVELS[LEVEL], pos)
             if under == UPSTAIR:
                 put(ACTLAYER[LEVEL], pos, EMPTY)
-                rlike.LEVEL -= 1
-                LEVEL = rlike.LEVEL
+                LURD.LEVEL -= 1
+                LEVEL = LURD.LEVEL
                 if LEVEL < 0:
                     break
             elif under == DWNSTR:
-                rlike.LEVEL += 1
-                LEVEL = rlike.LEVEL
+                LURD.LEVEL += 1
+                LEVEL = LURD.LEVEL
                 put(ACTLAYER[LEVEL], pos, PLAYER)
                 if LEVEL == len(LEVELS) - 1:
                     break
