@@ -22,7 +22,8 @@ WALL = "+"; DOOR = "="; EMPTY = " "; FLOOR = "."; DARK = "\\"
 GOLD = "*"; STAFF = "/"; PICKAXE = "{"
 BATTERY = "%"; ARMOR = "["
 # groups
-CONSUME = "bcdfghjklmnprstvwxyz" + BATTERY + PICKAXE
+POT = "bcdfghjklmnprstvwxyz"
+CONSUME = POT + BATTERY + PICKAXE
 WEAP = STAFF 
 FIGHTABLE = "BCDFGHJKLMNPRSTVWXYZ"
 TANG = STONE + WALL + DOOR  # Tangible
@@ -63,6 +64,7 @@ EQUIP = {
     "weapn": None,
     "armor": None
 }
+NME = None
 # the RNG picks randomly from:
 # bbbcdddfffggghjklllmmnnppprstttvwwxyyyyz
 POTIONS = {
@@ -90,10 +92,10 @@ ACTLAYER.append(["           ",
 "           ",
 "           "])
 END = """##########
-#    Wow #
+#        #
 #  <     #
-# .,.,., #
-# TheEnd #
+#        #
+#        #
 ##########""".splitlines()
 HELP = """
 COMMANDS:
@@ -169,7 +171,7 @@ def findsub(b, sub):
 ### ---- GAME PIECE TOOLKIT ----
 def makename():
     vowel = "aeiou"
-    const = "bbbcdddfffggghjklllmmnnppprstttvwwxyyyyz"
+    const = "bbbcdddfffggghjklllmmnnppprstttvwwxyyyz"
     special = "bdfglp"
     roll = randint(0, 100)
     if roll < 15: return choice(const) + choice(vowel) + (choice(special) * 2) + "y"
@@ -215,11 +217,11 @@ def makeenemy(lvl):
 def step(pos, direction, lvl):
     global LEVELS, ACTLAYER
     x2, y2 = pos[0] + direction[0], pos[1] + direction[1]
-    if 0 > x2 or x2 >= len(LEVELS[lvl][0]) or 0 > y2 or y2 >= len(LEVELS[lvl]): return "" 
+    if 0 > x2 or x2 >= len(LEVELS[lvl][0]) or 0 > y2 or y2 >= len(LEVELS[lvl]): return "Bump\n" 
     piece = get(ACTLAYER[lvl], pos)
     nxt = get(ACTLAYER[lvl], (x2, y2))
     floor = get(LEVELS[lvl], (x2, y2))
-    if floor in TANG: return ""
+    if floor in TANG: return "Bump\n"
     if nxt != EMPTY:
         return collide(pos, (x2, y2), lvl)
     put(ACTLAYER[lvl], pos, EMPTY)
@@ -229,10 +231,10 @@ def step(pos, direction, lvl):
     return ""
 
 def collide(pos1, pos2, lvl): #pos1 is moving onto pos2
-    global LEVELS, ACTLAYER, SCORE, HP, ACTORS, INV
+    global LEVELS, ACTLAYER, SCORE, HP, ACTORS, INV, NME
     data = ""
     p1, p2 = get(ACTLAYER[lvl], pos1), get(ACTLAYER[lvl], pos2)
-    if p1 == PLAYER and p2 in [DOOR, GOLD]: # not to slef, door on actlayer
+    if p1 == PLAYER and p2 in [DOOR, GOLD]: # note to slef, door on actlayer
         put(ACTLAYER[lvl], pos2, EMPTY)
     if p1 == PLAYER and p2 == GOLD:
         SCORE += 10
@@ -248,6 +250,7 @@ def collide(pos1, pos2, lvl): #pos1 is moving onto pos2
     if p1 == PLAYER and p2 in FIGHTABLE:
         enemy = ACTORS[lvl][pos2]
         enemy['state'] = 'agg'
+        NME = enemy
         roll = randint(0, 100)
         if roll < 15:
             data += "You miss the " + enemy['name']
@@ -263,6 +266,7 @@ def collide(pos1, pos2, lvl): #pos1 is moving onto pos2
             enemy['HP'] -= dmg
     if p1 in FIGHTABLE and p2 == PLAYER:
         enemy = ACTORS[lvl][pos1]
+        NME = enemy
         roll = randint(0, 100)
         if roll < 15:
            data += "The " + enemy['name'] + " misses you\n"
@@ -270,6 +274,16 @@ def collide(pos1, pos2, lvl): #pos1 is moving onto pos2
            data += "The " + enemy['name'] + " hits you\n"
            dmg = max(enemy['ATK'] - DEF, 1)
            HP -= dmg
+    if p1 in POT and p2 in FIGHTABLE:
+        data += applypotion(ACTORS[LEVEL][pos1], enemy=ACTORS[LEVEL][pos2])
+        ACTORS[LEVEL].pop(pos1)
+        put(ACTLAYER[LEVEL], pos1, EMPTY)
+    elif p1 in GETTABLE and p2 in FIGHTABLE:
+        item, enemy = ACTORS[LEVEL][pos1], ACTORS[LEVEL][pos2]
+        if "stat" in item: enemy["HP"] -= item["stat"]
+        elif "uses" in item: enemy["HP"] -= item["uses"]
+        ACTORS[LEVEL].pop(pos1)
+        put(ACTLAYER[LEVEL], pos1, EMPTY)
     return data
 
 def directto(pos1, pos2):
@@ -489,38 +503,64 @@ def equip(item):
         DEF += item["stat"]
     return "Equipted " + item["name"]
 
-def applypotion(pot):
+def applypotion(pot, enemy=None):
     global INV, ATK, DEF, HP, INLIGHT, LEVEL
-    if pot not in INV: return "do not have " + pot['name']
-    INV.remove(pot)
     ret = "It was a potion of "
     fn = pot['fn']
     if fn == "+ STR":
-        ATK += randint(1, 2)
+        if enemy:
+            enemy["ATK"] += randint(1, 2)
+        else:
+            ATK += randint(1, 2)
         return ret + "power!"
     elif fn == "+ DEF":
-        DEF += randint(1, 2)
+        if enemy:
+            enemy["DEF"] += randint(1, 2)
+        else:
+            DEF += randint(1, 2)
         return ret + "fortitude!"
     elif fn == "+ HP":
-        HP += randint(5, 15)
+        if enemy:
+            enemy['HP'] += randint(5, 15)
+        else:
+            HP += randint(5, 15)
         return ret + "healing!"
     elif fn == "- STR":
-        ATK = max(1, ATK - randint(1, 2))
+        if enemy:
+            enemy["ATK"] = max(1, enemy["ATK"] - randint(1, 2))
+        else:
+            ATK = max(1, ATK - randint(1, 2))
         return ret + "weakness!"
     elif fn == "- DEF":
-        DEF = max(1, DEF - randint(1, 2))
+        if enemy:
+            enemy["DEF"] = max(1, enemy["DEF"] - randint(1, 2))
+        else:
+            DEF = max(1, DEF - randint(1, 2))
         return ret + "flimsyness!"
     elif fn == "PSN":
-        HP -= randint(5, 15)
+        if enemy:
+            enemy['HP'] -= randint(5, 15)
+        else:
+            HP -= randint(5, 15)
         return ret + "poison! Yowch!"
     elif fn == "VIS":
-        for x in range(len(LEVELS[LEVEL][0])):
-            for y in range(len(LEVELS[LEVEL])):
-                INLIGHT[LEVEL].add((x, y))
+        if enemy:
+            enemy["state"] = "sleep"
+        else:
+            for x in range(len(LEVELS[LEVEL][0])):
+                for y in range(len(LEVELS[LEVEL])):
+                    INLIGHT[LEVEL].add((x, y))
         return ret + "vision!"
     elif fn == "WARP":
-        put(ACTLAYER[LEVEL], find(ACTLAYER[LEVEL], PLAYER), EMPTY)
-        put(ACTLAYER[LEVEL], find(LEVELS[LEVEL], DWNSTR), PLAYER)
+        if enemy:
+            for pos in ACTORS[LEVEL]:
+                if enemy is ACTORS[pos]:
+                    put(ACTLAYER[LEVEL], pos, EMPTY)
+                    put(ACTLAYER[LEVEL], find(LEVELS[LEVEL], DWNSTR), enemy["char"])
+                    break
+        else:
+            put(ACTLAYER[LEVEL], find(ACTLAYER[LEVEL], PLAYER), EMPTY)
+            put(ACTLAYER[LEVEL], find(LEVELS[LEVEL], DWNSTR), PLAYER)
         return ret + "teleportation!"
 
 def boardsturn(lvl):
@@ -546,6 +586,7 @@ def get_stats(): #for the sake of gamemode.py
         "Weapon": EQUIP["weapn"], "Armor": EQUIP["armor"]
     }
 def get_inlight(): return INLIGHT
+def get_nme(): return NME if NME is not None and NME["HP"] > 0 else None
 
 def dig_dungeon(floors=15):
     global ACTLAYER, INLIGHT, ACTORS, LEVELS, END
@@ -579,47 +620,29 @@ def update_scoreboard(NAME, lvl):
         NAME = NAME[0:10]
     if not NAME:
         NAME = "You"
-    myentry = repr([NAME, str(lvl), str(SCORE)])
-    board = """   ### HALL OF FAME ###   ,
-   NAME    | FLOOR, SCORE ,
------------+--------------,
-           |              ,
-           |              ,
-           |              ,
-           |              ,
-           |              ,
-           |              ,
-           |              ,
-           |              ,
-           |              ,
-           |              ,""".splitlines()
+    myentry = [NAME, str(lvl), str(SCORE)]
     try:
-        with open("scoreboard.txt", "r") as SCOREBOARD:
-            scoreboard = SCOREBOARD.read().splitlines()
+        with open("scoreboard.pyon", "r") as SCOREBOARD:
+            scoreboard = eval(SCOREBOARD.read())
     except IOError:
         scoreboard = []
-    with open("scoreboard.txt", "w") as SCOREBOARD:
-        ENTERED = False
-        for i, entry in enumerate(scoreboard):
-            name, lvl, score = eval(entry)
-            if i > 10:
-                break
-            if not ENTERED:
-                if LEVEL > int(lvl) or (LEVEL == int(lvl) and SCORE > int(score)):
-                    SCOREBOARD.write(myentry + "\n")
-                    ENTERED = True
-                SCOREBOARD.write(entry + "\n")
-        if len(scoreboard) < 10 and not ENTERED:
-            SCOREBOARD.write(myentry)
-    with open("scoreboard.txt", "r") as SCOREBOARD:
-        scoreboard = SCOREBOARD.read().splitlines()
-        for i, entry in enumerate(scoreboard):
-            name, lvl, score = eval(entry)
-            insert(board, [name], (0, i + 3))
-            insert(board, [lvl], (13, i + 3))
-            insert(board, [score], (20, i + 3))
-    for line in board:
-        print(line)
+    idx = 0
+    for entry in scoreboard:
+        if int(entry[1]) < int(myentry[1]):
+            break
+        elif int(entry[1]) == int(myentry[1]) and int(entry[2]) < int(myentry[2]):
+            break
+        idx += 1
+    scoreboard.insert(idx, myentry)
+    with open("scoreboard.pyon", "w") as SCOREBOARD:
+        SCOREBOARD.write(repr(scoreboard[:10]))
+    print("   ### HALL OF FAME ###")
+    print("  Name    |  Level, Score")
+    print("----------+---------------")
+    for entry in scoreboard[:10]:
+        s = entry[0] + " " * (10 - len(entry[0])) + "| "
+        s += entry[1] + " " * (5 - len(entry[1])) + ", " + entry[2]
+        print(s)
 
 if __name__ == """__main__""": #Badly needs cleaning...
     board = LEVELS[LEVEL]
@@ -683,7 +706,9 @@ How many levels deep? (blank for 15): """))
                 for n, item in enumerate(INV):
                     if c in [item['name'], str(n)]:
                         if "fn" not in item: data += "thats not consumable"
-                        else: data += str(applypotion(item))
+                        else:
+                            INV.remove(item) 
+                            data += str(applypotion(item))
                         break
                 else: data += "Nothing found under " + c
             if cmd in ["p", "pickaxe"]:

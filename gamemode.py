@@ -2,6 +2,7 @@ from __future__ import print_function, unicode_literals
 import os
 import pygame
 from pygame.locals import *
+from time import sleep
 import rlike
 from rlike import *
 import pdb
@@ -10,7 +11,7 @@ WIDTH, HIGHT = (640, 480)
 # tokens
 L = "L"; U = "U"; R = "R"; D = "D"
 S = "S"; C = "C"; E = "E"; P = "P"; I = "I"
-Q = "Q"; H = "H"
+Q = "Q"; H = "H"; T = "T"
 
 DIR = { L: (-1, 0), U: (0, -1), R: (1, 0), D: (0, 1) }
 KEYS = {
@@ -61,7 +62,7 @@ BTNS = {
     R: [K_RIGHT, K_r],
     D: [K_DOWN, K_d],
     S: [K_SPACE, K_s], C: [K_c], E: [K_e], P: [K_p],
-    I: [K_i], H: [K_h], Q: [K_q],
+    I: [K_i], H: [K_h], Q: [K_q], T: [K_t],
 }
 def get_inputs(btns=BTNS):
     inputs = []
@@ -114,20 +115,23 @@ def expect_input(expectlist=[]):
                     if e.key in expectlist: return e.key
                 else: return e.key
 
-def show_inv(dest=SCREEN):
+def show_inv(dest=SCREEN, test=None):
     inv = pygame.Surface((WIDTH/3, HIGHT/3 * 2))
     inv.fill((100, 100, 255))
     idx = "0123456789abcdefghijklmnopqrstuvwxyz"
     for i, item in enumerate(INV):
-        inv.blit(LOGFONT.render(idx[i] + " : " + item["name"], 0, (0, 0, 0)), (0, PW/2 * i))
+        if test and test in item:
+            inv.blit(LOGFONT.render(idx[i] + " : " + item["name"], 0, (100, 255, 100)), (0, PW/2 * i))
+        else:
+            inv.blit(LOGFONT.render(idx[i] + " : " + item["name"], 0, (0, 0, 0)), (0, PW/2 * i))
     dest.blit(inv, (WIDTH/3 * 2, 0))
     btn = expect_input()
     for i, item in enumerate(INV):
-        if KEYS[idx[i]] == btn:
+        if idx[i] in KEYS and KEYS[idx[i]] == btn:
             return item
     return None
 
-def get_stats_page(enemy=None):
+def get_stats_page():
     stats_page = pygame.Surface((PW * 5, HIGHT/3))
     stats_page.fill((100, 100, 255))
     stats = get_stats()
@@ -139,8 +143,40 @@ def get_stats_page(enemy=None):
     stats_page.blit(LOGFONT.render("DEF : " + str(stats["DEF"]), 0, (0, 0, 0)), (PW/3, (PW/3*2)*5))
     stats_page.blit(LOGFONT.render("Armor :", 0, (0, 0, 0)), (PW/3, (PW/3*2)*6))
     if stats["Armor"]: stats_page.blit(LOGFONT.render(stats["Armor"]["name"], 0, (0, 0, 0)), (PW/3, (PW/3*2)*7))
-    
     return stats_page
+
+def get_enemy_page(enemy):
+    page = pygame.Surface((PW * 5, HIGHT/3))
+    page.fill((255, 100, 100))
+    if enemy is None: return page
+    page.blit(LOGFONT.render(enemy["name"], 0, (0, 0, 0)), (PW/3, 0))
+    page.blit(LOGFONT.render("HP : " + str(enemy["HP"]), 0, (0, 0, 0)), (PW/3, (PW/3*2)))
+    page.blit(LOGFONT.render("ATK : " + str(enemy["ATK"]), 0, (0, 0, 0)), (PW/3, (PW/3*2)*2))
+    page.blit(LOGFONT.render("DEF : " + str(enemy["DEF"]), 0, (0, 0, 0)), (PW/3, (PW/3*2)*3))
+    return page
+
+def throw(pos, item, direction):
+    x, y = pos
+    hold = get(ACTLAYER[LEVEL], pos)
+    put(ACTLAYER[LEVEL], pos, item["char"])
+    rlike.ACTORS[LEVEL][pos] = item
+    ret = step((x, y), d, LEVEL)
+    put(ACTLAYER[LEVEL], pos, hold)
+    while not ret:
+        x, y = x + direction[0], y + direction[1]
+        dungeon = get_dungeon()
+        _x, _y = find(ACTLAYER[LEVEL], PLAYER)
+        SCREEN.fill((55, 55, 55))
+        SCREEN.blit(dungeon, (WIDTH/2 - (_x*PW),HIGHT/3 - (_y*PW)))
+        SCREEN.blit(LOG, (0, (HIGHT/4)*3))
+        SCREEN.blit(get_stats_page(), (WIDTH - PW * 5, (HIGHT/3)*2))
+        SCREEN.blit(get_enemy_page(get_nme()), (WIDTH - PW * 10, (HIGHT/3)*2))
+        pygame.display.update()
+        sleep(0.05)
+        get_inputs()
+        ret = step((x, y), d, LEVEL)
+    return ret
+
 
 inputs = []; log = "The Journey Begins"
 update_log(log)
@@ -165,6 +201,8 @@ while get_stats()["HP"] > 0:
                 rlike.LEVEL += 1
                 LEVEL = rlike.LEVEL
                 put(ACTLAYER[LEVEL], pos, PLAYER)
+                if LEVEL == len(LEVELS) - 1:
+                    break
             log += "Floor " + str(LEVEL) + "..."
         if cmd == H:
             update_log(HELP+"\n===================")
@@ -175,17 +213,19 @@ while get_stats()["HP"] > 0:
         if cmd == E:            
             update_log("What would you like to equip? ")
             SCREEN.blit(LOG, (0, 10))
-            item = show_inv()
+            item = show_inv(test='stat')
             if item is None: update_log("No item selected")
             elif "stat" not in item: update_log("Thats not equipable")
             else: log += str(equip(item))
         if cmd == C:
             update_log("What would you like to consume?")
             SCREEN.blit(LOG, (0, 10))
-            item = show_inv()
+            item = show_inv(test='fn')
             if item is None: update_log("No item selected")
             elif "fn" not in item: update_log("Thats not consumable")
-            else: log += str(applypotion(item))
+            else: 
+                INV.remove(item)
+                log += str(applypotion(item))
         if cmd == P:
             for item in INV:
                 if item['name'] == "Pickaxe":
@@ -207,7 +247,21 @@ while get_stats()["HP"] > 0:
                 else:
                     if randint(0, 2) == 0:
                         INV.remove(axe)
-                        log += "The pickaxe broke" 
+                        log += "The pickaxe broke"
+        if cmd == T:
+            update_log("What would you like to throw?")
+            SCREEN.blit(LOG, (0, 10))
+            item = show_inv()
+            if item is None: continue
+            update_log("What direction?")
+            _x, _y = find(ACTLAYER[LEVEL], PLAYER)
+            SCREEN.fill((55, 55, 55))
+            SCREEN.blit(dungeon, (WIDTH/2 - (_x*PW),HIGHT/3 - (_y*PW)))
+            SCREEN.blit(LOG, (0, (HIGHT/4)*3))
+            d = DIRKEYS[expect_input([K_l, K_u, K_r, K_d, K_LEFT, K_UP, K_RIGHT, K_DOWN])]
+            INV.remove(item)
+            log += throw(find(ACTLAYER[LEVEL], PLAYER), item, d)
+
         if cmd == Q: pdb.set_trace()
         log += boardsturn(LEVEL)
         update_log(log)
@@ -216,10 +270,12 @@ while get_stats()["HP"] > 0:
     SCREEN.blit(dungeon, (WIDTH/2 - (_x*PW),HIGHT/3 - (_y*PW)))
     SCREEN.blit(LOG, (0, (HIGHT/4)*3))
     SCREEN.blit(get_stats_page(), (WIDTH - PW * 5, (HIGHT/3)*2))
+    SCREEN.blit(get_enemy_page(get_nme()), (WIDTH - PW * 10, (HIGHT/3)*2))
     pygame.display.update()
-
+pygame.quit()
 clear()
 print("You made it to level " + str(LEVEL))
+if LEVEL == len(LEVELS) - 1: print("Wow! You won!")
 print("You got " + str(get_stats()["GOLD"]) + " gold")
 NAME = raw_input("Name?: ")
 clear()
