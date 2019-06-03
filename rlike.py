@@ -3,6 +3,9 @@
 am i really going to re write this whole thing again? yes, problably
 """
 from __future__ import print_function, unicode_literals
+# python 3 fix
+try: input = raw_input
+except NameError: pass
 import os
 import sys
 from random import randint, choice
