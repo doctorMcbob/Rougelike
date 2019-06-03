@@ -1,4 +1,6 @@
 from __future__ import print_function, unicode_literals
+import sys
+if sys.version_info[0] > 2: raw_input = input
 import os
 import pygame
 from pygame.locals import *
@@ -34,7 +36,7 @@ SCREEN = pygame.display.set_mode((WIDTH, HIGHT))
 pygame.display.set_caption("The Temple of LURD")
 LOG = pygame.Surface((WIDTH, HIGHT))
 LOG.fill((200, 200, 200))
-LOGFONT = pygame.font.SysFont("Ubuntu", PW/2)
+LOGFONT = pygame.font.SysFont("Ubuntu", PW//2)
 SPRITES = {
     PLAYER: pygame.image.load("bin/player.png").convert(),
     DWNSTR: pygame.image.load("bin/downstairs.png").convert(),
@@ -263,7 +265,9 @@ while get_stats()["HP"] > 0:
             log += throw(find(ACTLAYER[LEVEL], PLAYER), item, d)
 
         if cmd == Q: pdb.set_trace()
-        log += boardsturn(LEVEL)
+        bt = boardsturn(LEVEL).splitlines()
+        for line in bt: 
+            if line != "Bump": log += line
         update_log(log)
     _x, _y = find(ACTLAYER[LEVEL], PLAYER)
     SCREEN.fill((55, 55, 55))
