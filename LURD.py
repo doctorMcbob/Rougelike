@@ -55,7 +55,6 @@ COLORS = {
     "\n": "\033[0m",
     "footer": "\033[0m",
 }
-
 ### ---- GAME GLOBALS ----
 INLIGHT = [set()]
 LEVELS = []
@@ -84,7 +83,6 @@ POTIONS = {
     "hxzc": "VIS",
     "y": "WARP",
 }
-
 #some set up
 LEVELS.append("""###########
 #         #
@@ -219,7 +217,6 @@ def makeenemy(lvl):
         "DEF": max(randint(max(1, lvl), lvl + 3), randint(lvl + 4, lvl + 6)),
         "char": name[0].upper()
     }
-
 ### ---- GAME FUNCTIONALITY ----
 def step(pos, direction, lvl):
     global LEVELS, ACTLAYER
@@ -236,7 +233,6 @@ def step(pos, direction, lvl):
     if piece != PLAYER:
         ACTORS[lvl][(x2, y2)] = ACTORS[lvl].pop(pos)
     return ""
-
 def collide(pos1, pos2, lvl): #pos1 is moving onto pos2
     global LEVELS, ACTLAYER, SCORE, HP, ACTORS, INV, NME
     data = ""
@@ -292,9 +288,8 @@ def collide(pos1, pos2, lvl): #pos1 is moving onto pos2
         ACTORS[LEVEL].pop(pos1)
         put(ACTLAYER[LEVEL], pos1, EMPTY)
     return data
-
 def directto(pos1, pos2):
-    """the direction you should go to be closer from point 1 to point 2"""
+    """should be the first step in a straight line from pos1 to pos2"""
     x1, y1 = pos1
     x2, y2 = pos2
     if x1 - x2 == 0: return (0, 1) if (y1 - y2) < 0 else (0, -1)
@@ -307,7 +302,6 @@ def directto(pos1, pos2):
         elif abs(x1 - x2) <= abs(y1 - y2):
             if (y1 - y2) % slope: return (0, 1) if (y1 - y2) < 0 else (0, -1)
             else: return (1, 0) if (x1 - x2) < 0 else (-1, 0)
-
 def insight(lvl, position1, position2, dist=10):
     if False in [position1, position2]: return False
     if getdist(position1, position2) > dist: return False
@@ -327,7 +321,6 @@ def insight(lvl, position1, position2, dist=10):
         if (get(LEVELS[lvl], (x1, y1)) in TANG or get(ACTLAYER[lvl], (x1, y1)) in TANG) and (x1, y1) != (x2, y2):
             return False
     return True
-
 def getlit(lights, lvl):  # 420 blaze it
     global INLIGHT
     s = ""
@@ -341,7 +334,6 @@ def getlit(lights, lvl):  # 420 blaze it
             else: s += DARK
         s += "\n"
     return s.splitlines()
-
 def solvable(board):
     try:
         entry = find(board, UPSTAIR)
@@ -358,7 +350,6 @@ def solvable(board):
         return False
     except IndexError:
         return False
-
 def newfloor(entry, lvl):
     board = (STONE * max(min(randint(20, 20 + (3 * lvl)), 110), entry[0] + 2) + "\n") * max(min(randint(15, 15 + (1 * lvl)), 37), entry[1] + 2)
     board = board.splitlines()
@@ -369,7 +360,6 @@ def newfloor(entry, lvl):
     put(board, exit, DWNSTR)
     put(board, entry, UPSTAIR)
     return board
-
 def makeroom(board, layer2, position, dimensions, lvl):
     w, h = dimensions
     room = (((WALL * w) + "\n") * h).splitlines()
@@ -381,7 +371,6 @@ def makeroom(board, layer2, position, dimensions, lvl):
         put(room_layer2, dor, DOOR)
     insert(board, room, position)
     insert(layer2, room_layer2, position)
-
 def pathfind(board):
     empties = [x for x in allof(board, EMPTY)]
     while empties:
@@ -397,10 +386,8 @@ def pathfind(board):
         if not solv: put(board, pos, FLOOR)
         animate(board, 0.001, data=pos, debug=True)
         empties = [x for x in allof(board, EMPTY)]
-
     for pos in allof(board, FLOOR): put(board, pos, EMPTY)
     return board
-
 def scrub(board, limit=3):
     slots = findsub(board, [STONE * limit] * limit)
     while slots:
@@ -411,7 +398,6 @@ def scrub(board, limit=3):
         animate(board, 0.001, debug=True)
         slots = findsub(board, [STONE * limit] * limit)
     return board
-
 def refine(board, layer2, lvl):
     room = findsub(board, [STONE * 6] * 6)
     if room: makeroom(board, layer2, choice(room), (6, 6), lvl)
@@ -426,7 +412,6 @@ def refine(board, layer2, lvl):
         except IndexError: continue
     insert(board, b, (1, 1))
     return board
-
 def populate(board, lvl):
     global ACTLAYER, ACTORS
     empties = [x for x in allof(board, EMPTY)]
@@ -477,7 +462,6 @@ def populate(board, lvl):
             put(ACTLAYER[lvl], pos, axe['char'])
             ACTORS[lvl][pos] = axe
     return board
-
 def dequip(item):
     global ATK, DEF
     if EQUIP["weapn"] is item:
@@ -488,9 +472,7 @@ def dequip(item):
         INV.append(item)
         EQUIP["armor"] = None
         DEF -= item['stat']
-    else:
-        return "not equipted"
-
+    else: return "not equipted"
 def equip(item):   
     global ATK, DEF, INV
     if item not in INV:
@@ -509,52 +491,38 @@ def equip(item):
         EQUIP["armor"] = item
         DEF += item["stat"]
     return "Equipted " + item["name"]
-
 def applypotion(pot, enemy=None):
     global INV, ATK, DEF, HP, INLIGHT, LEVEL
     ret = "It was a potion of "
     fn = pot['fn']
     if fn == "+ STR":
-        if enemy:
-            enemy["ATK"] += randint(1, 2)
-        else:
-            ATK += randint(1, 2)
+        if enemy: enemy["ATK"] += randint(1, 2)
+        else: ATK += randint(1, 2)
         return ret + "power!"
     elif fn == "+ DEF":
-        if enemy:
-            enemy["DEF"] += randint(1, 2)
-        else:
-            DEF += randint(1, 2)
+        if enemy: enemy["DEF"] += randint(1, 2)
+        else: DEF += randint(1, 2)
         return ret + "fortitude!"
     elif fn == "+ HP":
-        if enemy:
-            enemy['HP'] += randint(5, 15)
-        else:
-            HP += randint(5, 15)
+        if enemy: enemy['HP'] += randint(5, 15)
+        else: HP += randint(5, 15)
         return ret + "healing!"
     elif fn == "- STR":
-        if enemy:
-            enemy["ATK"] = max(1, enemy["ATK"] - randint(1, 2))
-        else:
-            ATK = max(1, ATK - randint(1, 2))
+        if enemy: enemy["ATK"] = max(1, enemy["ATK"] - randint(1, 2))
+        else: ATK = max(1, ATK - randint(1, 2))
         return ret + "weakness!"
     elif fn == "- DEF":
-        if enemy:
-            enemy["DEF"] = max(1, enemy["DEF"] - randint(1, 2))
-        else:
-            DEF = max(1, DEF - randint(1, 2))
+        if enemy: enemy["DEF"] = max(1, enemy["DEF"] - randint(1, 2))
+        else: DEF = max(1, DEF - randint(1, 2))
         return ret + "flimsyness!"
     elif fn == "PSN":
-        if enemy:
-            enemy['HP'] -= randint(5, 15)
-        else:
-            HP -= randint(5, 15)
+        if enemy: enemy['HP'] -= randint(5, 15)
+        else: HP -= randint(5, 15)
         return ret + "poison! Yowch!"
     elif fn == "VIS":
-        if enemy:
-            enemy["state"] = "sleep"
+        if enemy: enemy["state"] = "sleep"
         else:
-            for x in range(len(LEVELS[LEVEL][0])):
+             for x in range(len(LEVELS[LEVEL][0])):
                 for y in range(len(LEVELS[LEVEL])):
                     INLIGHT[LEVEL].add((x, y))
         return ret + "vision!"
@@ -570,7 +538,6 @@ def applypotion(pot, enemy=None):
             put(ACTLAYER[LEVEL], find(ACTLAYER[LEVEL], PLAYER), EMPTY)
             put(ACTLAYER[LEVEL], find(LEVELS[LEVEL], DWNSTR), PLAYER)
         return ret + "teleportation!"
-
 def boardsturn(lvl):
     ret = ""
     for pos in list(ACTORS[lvl].keys()): 
@@ -586,7 +553,6 @@ def boardsturn(lvl):
                 ret += step(pos, directto(pos, find(ACTLAYER[lvl], PLAYER)), lvl)
             elif actor['state'] == 'hide': pass
     return ret
-
 def get_stats(): #for the sake of gamemode.py
     return {
         "HP": HP, "ATK": ATK, "DEF": DEF, "GOLD": SCORE,
@@ -594,7 +560,6 @@ def get_stats(): #for the sake of gamemode.py
     }
 def get_inlight(): return INLIGHT
 def get_nme(): return NME if NME is not None and NME["HP"] > 0 else None
-
 def dig_dungeon(floors=15):
     global ACTLAYER, INLIGHT, ACTORS, LEVELS, END
     LEVEL = 0
@@ -602,7 +567,6 @@ def dig_dungeon(floors=15):
         ACTORS.append({})
     for x in range(floors + 1):
         INLIGHT.append(set())
-
     axe = makepickaxe()
     ACTORS[LEVEL][(5, 2)] = axe
     put(ACTLAYER[LEVEL], (5, 2), axe['char']) 
@@ -621,24 +585,18 @@ def dig_dungeon(floors=15):
     LEVELS.append([" " * (entry[0] + len(END[0]))] * (entry[1] + len(END)))
     insert(LEVELS[-1], END, (entry[0] - 3, entry[1] - 2))
     ACTLAYER.append([" " * len(LEVELS[-1][0])] * len(LEVELS[-1]))
-
 def update_scoreboard(NAME, lvl):
-    if len(NAME) > 10:
-        NAME = NAME[0:10]
-    if not NAME:
-        NAME = "You"
+    if len(NAME) > 10: NAME = NAME[0:10]
+    if not NAME: NAME = "You"
     myentry = [NAME, str(lvl), str(SCORE)]
     try:
         with open("scoreboard.pyon", "r") as SCOREBOARD:
             scoreboard = eval(SCOREBOARD.read())
-    except IOError:
-        scoreboard = []
+    except IOError: scoreboard = []
     idx = 0
     for entry in scoreboard:
-        if int(entry[1]) < int(myentry[1]):
-            break
-        elif int(entry[1]) == int(myentry[1]) and int(entry[2]) < int(myentry[2]):
-            break
+        if int(entry[1]) < int(myentry[1]): break
+        elif int(entry[1]) == int(myentry[1]) and int(entry[2]) < int(myentry[2]): break
         idx += 1
     scoreboard.insert(idx, myentry)
     with open("scoreboard.pyon", "w") as SCOREBOARD:
@@ -669,10 +627,8 @@ SPRITES:                                         ,
                                                  ,
 Time to build the dungeon.                       ,
 How many levels deep? (blank for 15): """))
-    if floors:
-        dig_dungeon(int(floors))
-    else:
-        dig_dungeon()
+    if floors: dig_dungeon(int(floors))
+    else: dig_dungeon()
     data = "The Jeorney Begins"
     animate(getlit([(find(ACTLAYER[LEVEL], PLAYER), 10)], LEVEL), .300, layer2=ACTLAYER[LEVEL], data=data)
     while HP > 0:

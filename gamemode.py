@@ -38,21 +38,21 @@ LOG = pygame.Surface((WIDTH, HIGHT))
 LOG.fill((200, 200, 200))
 LOGFONT = pygame.font.SysFont("Ubuntu", PW//2)
 SPRITES = {
-    PLAYER: pygame.image.load("bin/player.png").convert(),
-    DWNSTR: pygame.image.load("bin/downstairs.png").convert(),
-    UPSTAIR: pygame.image.load("bin/upstairs.png").convert(),
-    WALL: pygame.image.load("bin/wall.png").convert(),
-    STONE: pygame.image.load("bin/stone.png").convert(),
-    DOOR: pygame.image.load("bin/door.png").convert(),
-    EMPTY: pygame.image.load("bin/empty.png").convert(),
-    FLOOR: pygame.image.load("bin/floor.png").convert(),
-    STAFF: pygame.image.load("bin/sword.png").convert(),
-    ARMOR: pygame.image.load("bin/armor.png").convert(),
-    GOLD: pygame.image.load("bin/gold.png").convert(),
-    FIGHTABLE: pygame.image.load("bin/enemy.png").convert(),
-    PICKAXE: pygame.image.load("bin/pickaxe.png").convert(),
-    GETTABLE: pygame.image.load("bin/potion.png").convert(),
-    DARK: pygame.image.load("bin/dark.png").convert(),
+    PLAYER: pygame.image.load("bin1/player.png").convert(),
+    DWNSTR: pygame.image.load("bin1/downstairs.png").convert(),
+    UPSTAIR: pygame.image.load("bin1/upstairs.png").convert(),
+    WALL: pygame.image.load("bin1/wall.png").convert(),
+    STONE: pygame.image.load("bin1/stone.png").convert(),
+    DOOR: pygame.image.load("bin1/door.png").convert(),
+    EMPTY: pygame.image.load("bin1/empty.png").convert(),
+    FLOOR: pygame.image.load("bin1/floor.png").convert(),
+    STAFF: pygame.image.load("bin1/sword.png").convert(),
+    ARMOR: pygame.image.load("bin1/armor.png").convert(),
+    GOLD: pygame.image.load("bin1/gold.png").convert(),
+    FIGHTABLE: pygame.image.load("bin1/enemy.png").convert(),
+    PICKAXE: pygame.image.load("bin1/pickaxe.png").convert(),
+    GETTABLE: pygame.image.load("bin1/potion.png").convert(),
+    DARK: pygame.image.load("bin1/dark.png").convert(),
 }
 for key in SPRITES.keys():
     SPRITES[key].set_colorkey((255, 0, 220))
