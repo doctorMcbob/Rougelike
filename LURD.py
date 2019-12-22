@@ -1,6 +1,6 @@
 #rlike.py redux
 """
-INCOMING REWRITE
+INCOMING REWRITE (tm)
 wishlist
 . python 3
 . build in conceptual space and paint a board each turn
@@ -530,7 +530,7 @@ def applypotion(pot, enemy=None):
         if enemy:
             for pos in ACTORS[LEVEL].keys():
                 if enemy is ACTORS[LEVEL][pos]:
-                    ACTORS[LEVEL][find(LEVELS[LEVEL], DWNSTR)] = ACTORS[LEVEL].pop(find(ACTLAYER[LEVEL], PLAYER))
+                    ACTORS[LEVEL][find(LEVELS[LEVEL], DWNSTR)] = ACTORS[LEVEL].pop(find(ACTLAYER[LEVEL], enemy["char"]))
                     put(ACTLAYER[LEVEL], pos, EMPTY)
                     put(ACTLAYER[LEVEL], find(LEVELS[LEVEL], DWNSTR), enemy["char"])
                     break
