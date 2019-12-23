@@ -530,7 +530,7 @@ def applypotion(pot, enemy=None):
         if enemy:
             for pos in ACTORS[LEVEL].keys():
                 if enemy is ACTORS[LEVEL][pos]:
-                    ACTORS[LEVEL][find(LEVELS[LEVEL], DWNSTR)] = ACTORS[LEVEL].pop(find(ACTLAYER[LEVEL], enemy["char"]))
+                    ACTORS[LEVEL][find(LEVELS[LEVEL], DWNSTR)] = ACTORS[LEVEL].pop(pos)
                     put(ACTLAYER[LEVEL], pos, EMPTY)
                     put(ACTLAYER[LEVEL], find(LEVELS[LEVEL], DWNSTR), enemy["char"])
                     break
